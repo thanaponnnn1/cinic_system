@@ -5,6 +5,13 @@ import { QUEUE_CONNECTION } from '../queue/queue.tokens';
 import { ReminderProcessorService } from '../reminders/reminder-processor.service';
 import type { ReminderJobData } from '../reminders/reminder-scheduler.service';
 import { DigestService } from '../digest/digest.service';
+import { WaitlistEngineService } from '../waitlist/waitlist-engine.service';
+import { ClockService } from '../clock/clock.service';
+import {
+  WAITLIST_EXPIRE_JOB,
+  WAITLIST_MATCH_JOB,
+  type WaitlistMatchJobData,
+} from '../waitlist/waitlist-queue.service';
 
 /** ชื่องานตามรอบเวลา */
 export const DAILY_DIGEST_JOB = 'daily-digest';
@@ -26,15 +33,45 @@ export class JobDispatcherService {
     private readonly reminders: ReminderProcessorService,
     private readonly digest: DigestService,
     @Inject(QUEUE_CONNECTION) private readonly redis: IORedis,
+    private readonly waitlist: WaitlistEngineService,
+    private readonly clock: ClockService,
   ) {}
 
-  async dispatch(name: string, data: ReminderJobData | undefined): Promise<unknown> {
+  async dispatch(
+    name: string,
+    data: ReminderJobData | WaitlistMatchJobData | undefined,
+  ): Promise<unknown> {
+    // ฝั่ง API เป็นคนกดข้ามเวลาตอนเดโม worker จึงต้องอ่าน offset ล่าสุดก่อนตัดสินใจทุกงาน
+    // ไม่ใช่เฉพาะงานเตือนนัด — งานปิดข้อเสนอคิวว่างก็ตัดสินจากเวลาเหมือนกัน
+    await this.clock.refresh();
+
     if (name === MsgType.REMINDER_1D || name === MsgType.REMINDER_2H) {
       return this.reminders.process(data as ReminderJobData);
     }
 
     if (name === DAILY_DIGEST_JOB) {
       return this.digest.sendDailyDigest();
+    }
+
+    if (name === WAITLIST_MATCH_JOB) {
+      const slot = data as WaitlistMatchJobData | undefined;
+
+      // ข้อมูลไม่ครบแปลว่างานมาจากรุ่นเก่าหรือถูกแก้มา — ไม่เดาค่าที่หายไปแล้วไปแตะฐานข้อมูล
+      if (!slot?.providerId || !slot.serviceId || !slot.slotStart || !slot.slotEnd) {
+        this.logger.warn('งานจับคู่คิวว่างข้อมูลไม่ครบ — ข้ามไป');
+        return null;
+      }
+
+      return this.waitlist.offerSlot({
+        providerId: slot.providerId,
+        serviceId: slot.serviceId,
+        slotStart: new Date(slot.slotStart),
+        slotEnd: new Date(slot.slotEnd),
+      });
+    }
+
+    if (name === WAITLIST_EXPIRE_JOB) {
+      return this.waitlist.expireOffers();
     }
 
     if (name === HEARTBEAT_JOB) {

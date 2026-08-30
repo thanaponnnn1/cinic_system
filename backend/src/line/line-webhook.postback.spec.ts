@@ -4,6 +4,7 @@ import { ApptStatus } from '@clinicq/shared';
 import { LineWebhookService } from './line-webhook.service';
 import { LineMessagingService } from './line-messaging.service';
 import { AppointmentsService } from '../appointments/appointments.service';
+import { WaitlistEngineService } from '../waitlist/waitlist-engine.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PostbackAction, encodePostback } from './postback-data';
 import type { LineWebhookEvent } from './line-webhook.types';
@@ -33,6 +34,7 @@ describe('LineWebhookService — ปุ่มยืนยัน/ขอเลื�
 
   const appointments = { confirmFromLine: jest.fn(), requestRescheduleFromLine: jest.fn() };
   const line = { replyText: jest.fn(), pushText: jest.fn() };
+  const waitlist = { claim: jest.fn() };
   let adminUserId: string | undefined;
 
   const confirmData = encodePostback({
@@ -45,7 +47,9 @@ describe('LineWebhookService — ปุ่มยืนยัน/ขอเลื�
   });
 
   beforeEach(async () => {
-    [...Object.values(appointments), ...Object.values(line)].forEach((fn) => fn.mockReset());
+    [...Object.values(appointments), ...Object.values(line), waitlist.claim].forEach((fn) =>
+      fn.mockReset(),
+    );
     adminUserId = 'Uadmin';
 
     const module: TestingModule = await Test.createTestingModule({
@@ -60,6 +64,7 @@ describe('LineWebhookService — ปุ่มยืนยัน/ขอเลื�
         },
         { provide: LineMessagingService, useValue: line },
         { provide: AppointmentsService, useValue: appointments },
+        { provide: WaitlistEngineService, useValue: waitlist },
         { provide: ConfigService, useValue: { get: () => adminUserId } },
       ],
     }).compile();
@@ -125,6 +130,7 @@ describe('LineWebhookService — ปุ่มยืนยัน/ขอเลื�
         },
         { provide: LineMessagingService, useValue: line },
         { provide: AppointmentsService, useValue: appointments },
+        { provide: WaitlistEngineService, useValue: waitlist },
         { provide: ConfigService, useValue: { get: () => undefined } },
       ],
     }).compile();
@@ -181,5 +187,107 @@ describe('LineWebhookService — ปุ่มยืนยัน/ขอเลื�
     expect(appointments.confirmFromLine).not.toHaveBeenCalled();
     expect(appointments.requestRescheduleFromLine).not.toHaveBeenCalled();
     expect(line.replyText).toHaveBeenCalled();
+  });
+});
+
+describe('LineWebhookService — ปุ่มจองคิวว่าง', () => {
+  let service: LineWebhookService;
+
+  const waitlist = { claim: jest.fn() };
+  const line = { replyText: jest.fn(), pushText: jest.fn() };
+  const appointments = { confirmFromLine: jest.fn(), requestRescheduleFromLine: jest.fn() };
+
+  const claimData = encodePostback({
+    action: PostbackAction.CLAIM_SLOT,
+    waitlistEntryId: 'wl_1',
+  });
+
+  const WON = {
+    status: 'ok' as const,
+    appointmentId: 'appt_new',
+    slotStart: new Date('2026-09-02T03:30:00.000Z'),
+    providerName: 'คุณแอน',
+    serviceName: 'ทรีตเมนต์ผิวหน้า',
+  };
+
+  beforeEach(async () => {
+    [waitlist.claim, ...Object.values(line), ...Object.values(appointments)].forEach((fn) =>
+      fn.mockReset(),
+    );
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        LineWebhookService,
+        { provide: PrismaService, useValue: { customer: {}, messageLog: {} } },
+        { provide: LineMessagingService, useValue: line },
+        { provide: AppointmentsService, useValue: appointments },
+        { provide: WaitlistEngineService, useValue: waitlist },
+        { provide: ConfigService, useValue: { get: () => 'Uadmin' } },
+      ],
+    }).compile();
+
+    service = module.get(LineWebhookService);
+  });
+
+  it('ส่ง waitlistEntryId กับบัญชีที่กดไปให้เครื่องยนต์คิวรอตรวจเอง', async () => {
+    waitlist.claim.mockResolvedValue(WON);
+
+    await service.handleEvents([postbackEvent(claimData)]);
+
+    expect(waitlist.claim).toHaveBeenCalledWith('wl_1', 'Uline1');
+  });
+
+  it('คนที่กดทันได้คำตอบว่าจองสำเร็จ พร้อมวันเวลาที่ได้', async () => {
+    waitlist.claim.mockResolvedValue(WON);
+
+    await service.handleEvents([postbackEvent(claimData)]);
+
+    const reply = line.replyText.mock.calls[0][1] as string;
+    expect(reply).toContain('10:30');
+    expect(reply).toContain('คุณแอน');
+  });
+
+  it('คนที่กดช้าได้ข้อความสุภาพว่าคิวมีผู้จองแล้ว ไม่ใช่ error', async () => {
+    waitlist.claim.mockResolvedValue({ status: 'taken' });
+
+    await service.handleEvents([postbackEvent(claimData)]);
+
+    expect(line.replyText.mock.calls[0][1]).toContain('มีผู้จองแล้ว');
+  });
+
+  it('กดหลังหมดเวลาบอกให้รอคิวรอบหน้า', async () => {
+    waitlist.claim.mockResolvedValue({ status: 'expired' });
+
+    await service.handleEvents([postbackEvent(claimData)]);
+
+    expect(line.replyText.mock.calls[0][1]).toContain('หมดเวลา');
+  });
+
+  it('คนที่จองไปแล้วกดซ้ำ ต้องไม่ถูกบอกว่าคนอื่นแย่งไป', async () => {
+    waitlist.claim.mockResolvedValue({ status: 'already_claimed' });
+
+    await service.handleEvents([postbackEvent(claimData)]);
+
+    const reply = line.replyText.mock.calls[0][1] as string;
+    expect(reply).toContain('จองคิวนี้ไว้แล้ว');
+    expect(reply).not.toContain('มีผู้จองแล้ว');
+  });
+
+  it('ปุ่มของใบจองที่ไม่ใช่ของบัญชีนี้ ตอบกลาง ๆ ไม่เปิดเผยว่ามีใบจองนั้นอยู่', async () => {
+    waitlist.claim.mockResolvedValue({ status: 'forbidden' });
+
+    await service.handleEvents([postbackEvent(claimData)]);
+
+    expect(line.replyText.mock.calls[0][1]).not.toContain('wl_1');
+  });
+
+  it('เด้งบอกร้านเมื่อมีคนคว้าคิวว่างได้ เพราะตารางวันนั้นเพิ่งเปลี่ยน', async () => {
+    waitlist.claim.mockResolvedValue(WON);
+
+    await service.handleEvents([postbackEvent(claimData)]);
+
+    const [to, text] = line.pushText.mock.calls[0];
+    expect(to).toBe('Uadmin');
+    expect(text).toContain('10:30');
   });
 });

@@ -30,6 +30,13 @@ function allText(node: unknown): string {
     .join(' | ');
 }
 
+/** ดึง appointmentId ออกจาก data ของปุ่ม — คืน null ถ้าเป็นปุ่มคนละชนิด */
+function appointmentIdOf(data: string | undefined): string | null {
+  const payload = parsePostback(data ?? '');
+
+  return payload && 'appointmentId' in payload ? payload.appointmentId : null;
+}
+
 describe('buildAppointmentReminderFlex', () => {
   const flex = buildAppointmentReminderFlex(APPOINTMENT, MsgType.REMINDER_1D);
 
@@ -62,7 +69,7 @@ describe('buildAppointmentReminderFlex', () => {
     );
 
     expect(confirm?.type).toBe('postback');
-    expect(parsePostback(confirm?.data ?? '')?.appointmentId).toBe('appt_1');
+    expect(appointmentIdOf(confirm?.data)).toBe('appt_1');
     expect(confirm?.label).toContain('ยืนยัน');
   });
 
@@ -74,7 +81,7 @@ describe('buildAppointmentReminderFlex', () => {
     );
 
     expect(reschedule?.type).toBe('postback');
-    expect(parsePostback(reschedule?.data ?? '')?.appointmentId).toBe('appt_1');
+    expect(appointmentIdOf(reschedule?.data)).toBe('appt_1');
     expect(reschedule?.label).toContain('เลื่อน');
   });
 

@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { LineModule } from '../line/line.module';
+import { LineMessagingModule } from '../line/line-messaging.module';
 import { NotificationsService } from './notifications.service';
 import { NotificationsController } from './notifications.controller';
 import { LineNotificationChannel } from './line-notification.channel';
@@ -12,7 +12,7 @@ import { NOTIFICATION_CHANNEL } from './notification-channel';
  * แก้บรรทัด useClass บรรทัดเดียว ไม่ต้องแตะโค้ดที่เรียกใช้เลย
  */
 @Module({
-  imports: [LineModule],
+  imports: [LineMessagingModule],
   controllers: [NotificationsController],
   providers: [
     NotificationsService,

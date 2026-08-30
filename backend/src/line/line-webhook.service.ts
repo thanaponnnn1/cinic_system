@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { APPT_STATUS_LABEL, type ApptStatus, DeliveryStatus, MsgType } from '@clinicq/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppointmentsService } from '../appointments/appointments.service';
+import { WaitlistEngineService, type ClaimResult } from '../waitlist/waitlist-engine.service';
 import type { LineActionAppointment, LineActionResult } from '../appointments/line-action.types';
 import { formatBangkokTime, formatThaiDate } from '../common/bangkok-time';
 import { LineMessagingService } from './line-messaging.service';
@@ -43,7 +44,31 @@ export const LINE_REPLY = {
   notYours:
     'ขออภัยครับ ปุ่มนี้ใช้กับบัญชีนี้ไม่ได้ 🙏\nรบกวนติดต่อทางร้านเพื่อตรวจสอบให้อีกครั้งนะครับ',
   appointmentGone: 'ไม่พบนัดนี้ในระบบแล้วครับ 🙏\nรบกวนติดต่อทางร้านเพื่อตรวจสอบอีกครั้งนะครับ',
+
+  slotWon: (slot: { slotStart: Date; providerName: string; serviceName: string }) =>
+    `จองคิวสำเร็จแล้วครับ 🎉\n${formatThaiDate(slot.slotStart)} เวลา ${formatBangkokTime(slot.slotStart)} น. กับ${slot.providerName}\nบริการ: ${slot.serviceName}\nแล้วพบกันครับ`,
+  slotTaken:
+    'ขออภัยครับ คิวนี้มีผู้จองแล้ว 🙏\nคุณยังอยู่ในคิวรอเหมือนเดิม มีคิวว่างครั้งหน้าเราจะรีบแจ้งให้ทราบทันทีครับ',
+  slotExpired:
+    'ขออภัยครับ ข้อเสนอคิวนี้หมดเวลาแล้ว 🙏\nคุณยังอยู่ในคิวรอ รอบหน้ามีคิวว่างเราจะแจ้งอีกครั้งครับ',
+  slotAlreadyYours: 'คุณจองคิวนี้ไว้แล้วครับ 🙏 ไม่ต้องกดซ้ำนะครับ แล้วพบกันตามเวลาที่นัดไว้ครับ',
+  slotNotYours:
+    'ขออภัยครับ ปุ่มนี้ใช้กับบัญชีนี้ไม่ได้ 🙏\nรบกวนติดต่อทางร้านเพื่อตรวจสอบอีกครั้งนะครับ',
+  slotGone: 'ไม่พบข้อเสนอคิวนี้แล้วครับ 🙏\nรบกวนติดต่อทางร้านเพื่อตรวจสอบอีกครั้งนะครับ',
 } as const;
+
+/** ข้อความบอกร้านว่าคิวที่ว่างถูกคว้าไปแล้ว — ตารางวันนั้นเพิ่งเปลี่ยน */
+function adminSlotClaimedAlert(slot: {
+  slotStart: Date;
+  providerName: string;
+  serviceName: string;
+}): string {
+  return (
+    '⚡ มีลูกค้าคว้าคิวว่างไปแล้ว\n' +
+    `${formatThaiDate(slot.slotStart)} เวลา ${formatBangkokTime(slot.slotStart)} น. กับ${slot.providerName}\n` +
+    `บริการ: ${slot.serviceName}`
+  );
+}
 
 /** ข้อความแจ้งพนักงานร้าน — ต้องบอกครบว่าใครต้องทำอะไรต่อ โดยไม่มีข้อมูลอ่อนไหว */
 function adminRescheduleAlert(appointment: LineActionAppointment): string {
@@ -77,6 +102,7 @@ export class LineWebhookService {
     private readonly prisma: PrismaService,
     private readonly line: LineMessagingService,
     private readonly appointments: AppointmentsService,
+    private readonly waitlist: WaitlistEngineService,
     private readonly config: ConfigService,
   ) {}
 
@@ -124,6 +150,11 @@ export class LineWebhookService {
       return;
     }
 
+    if (payload.action === PostbackAction.CLAIM_SLOT) {
+      await this.handleClaimSlot(payload.waitlistEntryId, lineUserId, replyToken);
+      return;
+    }
+
     const isConfirm = payload.action === PostbackAction.CONFIRM;
     const result = isConfirm
       ? await this.appointments.confirmFromLine(payload.appointmentId, lineUserId)
@@ -134,6 +165,26 @@ export class LineWebhookService {
     // เด้งบอกร้านเฉพาะเรื่องที่ต้องลงมือทำต่อ — ยืนยันนัดไม่ต้องรบกวนใคร
     if (!isConfirm && result.status === 'ok') {
       await this.notifyAdmin(adminRescheduleAlert(result.appointment));
+    }
+  }
+
+  /**
+   * ลูกค้ากด "จองคิวนี้" จากข้อความคิวว่าง
+   *
+   * ที่นี่ไม่ตัดสินใจอะไรเลยว่าใครได้คิว — WaitlistEngineService เป็นคนตัดสินในธุรกรรมเดียว
+   * หน้าที่ตรงนี้คือแปลผลเป็นคำพูด และบอกร้านเมื่อตารางเปลี่ยน
+   */
+  private async handleClaimSlot(
+    waitlistEntryId: string,
+    lineUserId: string,
+    replyToken: string,
+  ): Promise<void> {
+    const result = await this.waitlist.claim(waitlistEntryId, lineUserId);
+
+    await this.line.replyText(replyToken, describeClaim(result));
+
+    if (result.status === 'ok') {
+      await this.notifyAdmin(adminSlotClaimedAlert(result));
     }
   }
 
@@ -224,5 +275,23 @@ export class LineWebhookService {
         deliveryStatus: DeliveryStatus.SENT,
       },
     });
+  }
+}
+
+/** แปลผลการแย่งคิวเป็นข้อความที่ลูกค้าอ่านแล้วรู้ว่าต้องทำอะไรต่อ */
+function describeClaim(result: ClaimResult): string {
+  switch (result.status) {
+    case 'ok':
+      return LINE_REPLY.slotWon(result);
+    case 'taken':
+      return LINE_REPLY.slotTaken;
+    case 'expired':
+      return LINE_REPLY.slotExpired;
+    case 'already_claimed':
+      return LINE_REPLY.slotAlreadyYours;
+    case 'forbidden':
+      return LINE_REPLY.slotNotYours;
+    case 'not_found':
+      return LINE_REPLY.slotGone;
   }
 }

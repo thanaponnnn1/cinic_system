@@ -34,3 +34,26 @@ describe('postback data', () => {
     expect(parsePostback('')).toBeNull();
   });
 });
+
+describe('postback ของปุ่มรับคิวว่าง', () => {
+  it('ประกอบและถอดกลับได้ค่าเดิม', () => {
+    const data = encodePostback({ action: PostbackAction.CLAIM_SLOT, waitlistEntryId: 'wl_1' });
+
+    expect(parsePostback(data)).toEqual({
+      action: PostbackAction.CLAIM_SLOT,
+      waitlistEntryId: 'wl_1',
+    });
+  });
+
+  it('ปุ่มรับคิวว่างที่ไม่มี waitlistEntryId ถือว่าใช้ไม่ได้', () => {
+    expect(parsePostback('action=claim-slot')).toBeNull();
+  });
+
+  it('ปุ่มรับคิวว่างที่แนบ appointmentId มาแทนต้องไม่ผ่าน — กันเดา id ของนัดคนอื่น', () => {
+    expect(parsePostback('action=claim-slot&appointmentId=appt_1')).toBeNull();
+  });
+
+  it('ปุ่มยืนยันนัดที่แนบ waitlistEntryId มาแทน appointmentId ก็ต้องไม่ผ่านเช่นกัน', () => {
+    expect(parsePostback('action=confirm&waitlistEntryId=wl_1')).toBeNull();
+  });
+});

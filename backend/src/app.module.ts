@@ -15,6 +15,7 @@ import { ClockModule } from './clock/clock.module';
 import { RemindersModule } from './reminders/reminders.module';
 import { DigestModule } from './digest/digest.module';
 import { DemoModule } from './demo/demo.module';
+import { WaitlistModule } from './waitlist/waitlist.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { DemoModule } from './demo/demo.module';
     RemindersModule,
     DigestModule,
     DemoModule,
+    WaitlistModule,
   ],
 })
 export class AppModule {}

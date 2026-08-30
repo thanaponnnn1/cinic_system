@@ -25,6 +25,7 @@ import type {
 import { ACTIVE_STATUSES, assertTransition, canTransition } from './appointment-state-machine';
 import type { LineActionResult } from './line-action.types';
 import { ReminderSchedulerService } from '../reminders/reminder-scheduler.service';
+import { WaitlistQueueService } from '../waitlist/waitlist-queue.service';
 import { bangkokDayRange, formatBangkokDate, formatBangkokTime } from '../common/bangkok-time';
 import type { Prisma } from '../generated/prisma/client';
 
@@ -61,6 +62,7 @@ export class AppointmentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly reminders: ReminderSchedulerService,
+    private readonly waitlistQueue: WaitlistQueueService,
   ) {}
 
   // ── อ่าน ────────────────────────────────────────────────
@@ -316,12 +318,29 @@ export class AppointmentsService {
     return this.changeStatus(id, ApptStatus.RESCHEDULE_REQUESTED, viewerRole);
   }
 
+  /**
+   * ยกเลิกนัด แล้วประกาศช่องเวลาที่เพิ่งว่างให้คนในคิวรอทันที
+   *
+   * นี่คือจุดที่ "ช่องว่างในตาราง" กลายเป็นเงิน — คิวที่หลุดตอนเช้าควรมีคนมารับก่อนเที่ยง
+   * ไม่ใช่รอให้พนักงานว่างแล้วค่อยไล่โทรตาม
+   */
   async cancel(
     id: string,
     dto: CancelAppointmentDto,
     viewerRole: Role,
   ): Promise<AppointmentResponseDto> {
-    return this.changeStatus(id, ApptStatus.CANCELLED, viewerRole, { cancelReason: dto.reason });
+    const appt = await this.changeStatus(id, ApptStatus.CANCELLED, viewerRole, {
+      cancelReason: dto.reason,
+    });
+
+    await this.waitlistQueue.publishOpenSlot({
+      providerId: appt.provider.id,
+      serviceId: appt.service.id,
+      slotStart: appt.startsAt,
+      slotEnd: appt.endsAt,
+    });
+
+    return appt;
   }
 
   noShow(id: string, viewerRole: Role): Promise<AppointmentResponseDto> {

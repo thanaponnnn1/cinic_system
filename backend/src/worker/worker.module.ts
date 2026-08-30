@@ -6,6 +6,7 @@ import { QueueModule } from '../queue/queue.module';
 import { ClockModule } from '../clock/clock.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { DigestModule } from '../digest/digest.module';
+import { WaitlistModule } from '../waitlist/waitlist.module';
 import { ReminderProcessorService } from '../reminders/reminder-processor.service';
 import { JobDispatcherService } from './job-dispatcher.service';
 import { WorkerRunnerService } from './worker-runner.service';
@@ -24,6 +25,7 @@ import { WorkerRunnerService } from './worker-runner.service';
     ClockModule,
     NotificationsModule,
     DigestModule,
+    WaitlistModule,
   ],
   providers: [ReminderProcessorService, JobDispatcherService, WorkerRunnerService],
 })

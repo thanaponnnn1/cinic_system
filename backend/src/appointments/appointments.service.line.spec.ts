@@ -3,6 +3,7 @@ import { ApptStatus } from '@clinicq/shared';
 import { AppointmentsService } from './appointments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReminderSchedulerService } from '../reminders/reminder-scheduler.service';
+import { WaitlistQueueService } from '../waitlist/waitlist-queue.service';
 
 /**
  * เส้นทางที่ลูกค้ากดปุ่มเองในแชท LINE
@@ -35,6 +36,7 @@ describe('AppointmentsService — ปุ่มใน LINE', () => {
         AppointmentsService,
         { provide: PrismaService, useValue: { appointment: appointmentDb } },
         { provide: ReminderSchedulerService, useValue: scheduler },
+        { provide: WaitlistQueueService, useValue: { publishOpenSlot: jest.fn() } },
       ],
     }).compile();
 

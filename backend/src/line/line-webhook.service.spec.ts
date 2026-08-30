@@ -4,6 +4,7 @@ import { DeliveryStatus, MsgType } from '@clinicq/shared';
 import { LineWebhookService } from './line-webhook.service';
 import { LineMessagingService } from './line-messaging.service';
 import { AppointmentsService } from '../appointments/appointments.service';
+import { WaitlistEngineService } from '../waitlist/waitlist-engine.service';
 import { PrismaService } from '../prisma/prisma.service';
 import type { LineWebhookEvent } from './line-webhook.types';
 
@@ -54,6 +55,7 @@ describe('LineWebhookService — ผูกบัญชีด้วยรหั�
           provide: AppointmentsService,
           useValue: { confirmFromLine: jest.fn(), requestRescheduleFromLine: jest.fn() },
         },
+        { provide: WaitlistEngineService, useValue: { claim: jest.fn() } },
         { provide: ConfigService, useValue: { get: () => 'Uadmin' } },
       ],
     }).compile();

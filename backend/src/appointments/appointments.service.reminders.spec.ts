@@ -3,6 +3,7 @@ import { ApptStatus, Role } from '@clinicq/shared';
 import { AppointmentsService } from './appointments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReminderSchedulerService } from '../reminders/reminder-scheduler.service';
+import { WaitlistQueueService } from '../waitlist/waitlist-queue.service';
 
 /**
  * นัดกับงานเตือนต้องเดินไปด้วยกันเสมอ
@@ -25,17 +26,20 @@ describe('AppointmentsService — ซิงก์งานเตือนนั�
 
   const prisma = { $transaction: jest.fn() };
   const scheduler = { sync: jest.fn(), cancel: jest.fn() };
+  const waitlistQueue = { publishOpenSlot: jest.fn() };
 
   beforeEach(async () => {
     prisma.$transaction.mockReset().mockResolvedValue(created);
     scheduler.sync.mockReset().mockResolvedValue(undefined);
     scheduler.cancel.mockReset().mockResolvedValue(undefined);
+    waitlistQueue.publishOpenSlot.mockReset().mockResolvedValue(undefined);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AppointmentsService,
         { provide: PrismaService, useValue: prisma },
         { provide: ReminderSchedulerService, useValue: scheduler },
+        { provide: WaitlistQueueService, useValue: waitlistQueue },
       ],
     }).compile();
 
@@ -124,5 +128,36 @@ describe('AppointmentsService — ซิงก์งานเตือนนั�
     await service.requestReschedule('appt_1', Role.STAFF);
 
     expect(scheduler.cancel).toHaveBeenCalledWith('appt_1');
+  });
+
+  describe('คิวที่ว่างจากการยกเลิก', () => {
+    it('ยกเลิกนัดแล้วประกาศคิวว่างให้คนในคิวรอทันที — นี่คือจุดที่ช่องว่างกลายเป็นเงิน', async () => {
+      prisma.$transaction.mockResolvedValue({
+        ...created,
+        id: 'appt_1',
+        status: ApptStatus.CANCELLED,
+      });
+
+      await service.cancel('appt_1', { reason: 'ลูกค้าติดธุระ' }, Role.STAFF);
+
+      expect(waitlistQueue.publishOpenSlot).toHaveBeenCalledWith({
+        providerId: 'prov_1',
+        serviceId: 'svc_1',
+        slotStart: created.startsAt,
+        slotEnd: created.endsAt,
+      });
+    });
+
+    it('ไม่มาตามนัดไม่ประกาศคิวว่าง — เวลานั้นผ่านไปแล้ว ไม่มีใครมารับได้ทัน', async () => {
+      prisma.$transaction.mockResolvedValue({
+        ...created,
+        id: 'appt_1',
+        status: ApptStatus.NO_SHOW,
+      });
+
+      await service.noShow('appt_1', Role.STAFF);
+
+      expect(waitlistQueue.publishOpenSlot).not.toHaveBeenCalled();
+    });
   });
 });

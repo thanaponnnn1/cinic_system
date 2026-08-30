@@ -240,6 +240,9 @@ model WaitlistEntry {
   /// คิวที่เสนอไปให้ตอนนี้ และเส้นตายที่ต้องกดรับ
   offeredSlotAt  DateTime?
   offerExpiresAt DateTime?
+  /// ช่างของคิวที่เสนอไป — เก็บไว้เพราะตอนลูกค้ากดรับ ต้องสร้างนัดกับช่างคนเดิมที่ว่าง
+  /// ห้ามรับค่านี้จากปุ่มที่ลูกค้ากดส่งมา ไม่งั้นจะจองข้ามช่างได้
+  offeredProviderId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
