@@ -1,8 +1,11 @@
 // THNP ClinicQ — โครงสร้างฐานข้อมูล
 //
-// Phase 0 มีแค่ตาราง User เพื่อให้ pipeline (migrate → generate → boot) เดินได้ครบรอบก่อน
-// ตารางที่เหลือ (Customer, Appointment, Waitlist, Course, MessageLog, Campaign)
-// จะเพิ่มใน Phase 1 ตาม docs/plan-clinic-demo.md ข้อ 4
+// หลักการที่ยึดตลอดทั้งไฟล์นี้ (ที่มา: docs/plan-clinic-demo.md ข้อ 4 และข้อ 10)
+//
+// 1. ไม่มีที่เก็บ "รายละเอียดการรักษา" อยู่ในระบบเลย — เก็บแค่ชื่อบริการกลาง ๆ กับตารางเวลา
+//    ข้อความที่ส่งออกจึงสะอาดโดยโครงสร้าง ไม่ต้องพึ่งวินัยของคนกรอกข้อมูล
+// 2. ความยินยอมแยกตามวัตถุประสงค์ และเก็บเวลาที่ให้ไว้เสมอ (PDPA ต้องพิสูจน์ได้)
+// 3. ทุกอย่างเป็น soft delete (isActive) — ร้านจริงไม่เคยอยากลบข้อมูลถาวร
 
 generator client {
   provider     = "prisma-client"
@@ -16,6 +19,11 @@ datasource db {
   provider = "postgresql"
 }
 
+// ─────────────────────────────────────────────────────────────
+//  Enum — ค่าทุกตัวต้องตรงกับ shared/src/enums.ts เป๊ะ ๆ
+//  (มีเทสต์ใน src/common/enum-parity.spec.ts คอยยืนยันว่าไม่หลุดจากกัน)
+// ─────────────────────────────────────────────────────────────
+
 /// สิทธิ์ผู้ใช้ฝั่งร้าน
 /// VIEWER เห็นตารางนัดได้ แต่ต้องไม่เห็นเบอร์โทร/ประวัติลูกค้า — ข้อกำหนด PDPA
 enum Role {
@@ -24,17 +32,329 @@ enum Role {
   VIEWER
 }
 
+/// สถานะนัด — การเปลี่ยนสถานะคุมด้วย state machine (Phase 2)
+enum ApptStatus {
+  BOOKED
+  CONFIRMED
+  RESCHEDULE_REQUESTED
+  CANCELLED
+  NO_SHOW
+  COMPLETED
+}
+
+/// สถานะคิวรอ
+enum WaitlistStatus {
+  WAITING
+  OFFERED
+  CLAIMED
+  EXPIRED
+  CANCELLED
+}
+
+/// ชนิดข้อความที่ระบบส่งออก
+enum MsgType {
+  REMINDER_1D
+  REMINDER_2H
+  SLOT_OFFER
+  WINBACK
+  COURSE_EXPIRY
+  DAILY_DIGEST
+  LINK_CONFIRM
+}
+
+/// ผลการส่งข้อความ
+/// ค่า SKIPPED_* สำคัญไม่แพ้ SENT เพราะเป็นหลักฐานว่าระบบไม่ได้ส่งข้อความ
+/// หาคนที่ไม่ได้ให้ความยินยอม ซึ่งต้องพิสูจน์ได้ตาม PDPA
+enum DeliveryStatus {
+  SENT
+  FAILED
+  SKIPPED_NO_CONSENT
+  SKIPPED_NO_LINE
+  SKIPPED_DUPLICATE
+}
+
+// ─────────────────────────────────────────────────────────────
+//  ผู้ใช้ฝั่งร้านและการเข้าสู่ระบบ
+// ─────────────────────────────────────────────────────────────
+
 /// ผู้ใช้ฝั่งร้าน (เจ้าของ / พนักงาน) — ไม่ใช่ลูกค้าของคลินิก
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String    @id @default(cuid())
+  email        String    @unique
   passwordHash String
   name         String
-  role         Role     @default(STAFF)
-  isActive     Boolean  @default(true)
+  role         Role      @default(STAFF)
+  isActive     Boolean   @default(true)
   lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  refreshTokens       RefreshToken[]
+  createdAppointments Appointment[]  @relation("AppointmentCreatedBy")
+
+  @@index([role])
+}
+
+/// Refresh token ที่ยังใช้ได้
+///
+/// เก็บเป็น hash ไม่เก็บตัว token จริง — ถ้าฐานข้อมูลรั่ว คนที่ได้ไปก็ยังสวมสิทธิ์ไม่ได้
+/// และการเก็บลงตารางแบบนี้ทำให้ "ออกจากระบบ" กับ "ตัดสิทธิ์ทุกอุปกรณ์" ทำได้จริง
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  ลูกค้า
+// ─────────────────────────────────────────────────────────────
+
+model Customer {
+  id         String  @id @default(cuid())
+  name       String
+  phone      String  @unique
+  /// null = ยังไม่ได้ผูกบัญชี LINE จึงส่งข้อความหาไม่ได้
+  lineUserId String? @unique
+  /// รหัสเชื่อม 6 หลักที่พนักงานสร้างให้ลูกค้าพิมพ์ในแชท ใช้ได้ครั้งเดียว (Phase 3)
+  linkCode   String? @unique
+
+  /// ยินยอมรับข้อความเตือนนัด
+  consentReminder  Boolean   @default(false)
+  /// ยินยอมรับข้อความการตลาด (ใช้กับแคมเปญดึงลูกค้ากลับ)
+  consentMarketing Boolean   @default(false)
+  /// เวลาที่ให้ความยินยอมครั้งล่าสุด — หลักฐานตาม PDPA
+  consentAt        DateTime?
+
+  /// วันที่มารับบริการครั้งล่าสุด — หัวใจของการตามลูกค้าที่หายไป
+  lastVisitAt DateTime?
+  /// โน้ตทั่วไปสำหรับพนักงาน — ห้ามใส่ข้อมูลการรักษาเด็ดขาด
+  note        String?
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointments    Appointment[]
+  waitlistEntries WaitlistEntry[]
+  courses         CustomerCourse[]
+  messages        MessageLog[]
+  campaignRuns    CampaignRun[]
+
+  @@index([lastVisitAt])
+  @@index([isActive])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  ช่าง / หมอ และบริการ
+// ─────────────────────────────────────────────────────────────
+
+/// ผู้ให้บริการ — ช่าง หมอ หรือเตียง แล้วแต่ร้านจะนิยาม
+model Provider {
+  id        String   @id @default(cuid())
+  name      String
+  /// ตำแหน่งที่แสดงให้ลูกค้าเห็น เช่น "ช่างผู้เชี่ยวชาญ"
+  title     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointments Appointment[]
+
+  @@index([isActive])
+}
+
+/// บริการที่ร้านเปิดขาย — ชื่อต้องเป็นกลาง ไม่สื่อถึงอาการหรือการรักษา
+model Service {
+  id          String   @id @default(cuid())
+  name        String
+  durationMin Int
+  price       Decimal  @db.Decimal(10, 2)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  appointments    Appointment[]
+  waitlistEntries WaitlistEntry[]
+  coursePackages  CoursePackage[]
+
+  @@index([isActive])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  นัดหมาย
+// ─────────────────────────────────────────────────────────────
+
+model Appointment {
+  id         String     @id @default(cuid())
+  customerId String
+  providerId String
+  serviceId  String
+  startsAt   DateTime
+  endsAt     DateTime
+  status     ApptStatus @default(BOOKED)
+
+  /// เหตุผลที่ยกเลิก — เก็บไว้ดูว่าคิวหลุดเพราะอะไรบ่อยที่สุด
+  cancelReason     String?
+  /// ใครเป็นคนสร้างนัดนี้ (null = ระบบสร้างเอง เช่น ลูกค้ากดรับคิวว่างผ่าน LINE)
+  createdById      String?
+  /// ครั้งของคอร์สที่ตัดไปกับนัดนี้ (ถ้าลูกค้าเลือกใช้คอร์ส)
+  customerCourseId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customer       Customer        @relation(fields: [customerId], references: [id])
+  provider       Provider        @relation(fields: [providerId], references: [id])
+  service        Service         @relation(fields: [serviceId], references: [id])
+  createdBy      User?           @relation("AppointmentCreatedBy", fields: [createdById], references: [id])
+  customerCourse CustomerCourse? @relation(fields: [customerCourseId], references: [id])
+  messages       MessageLog[]
+
+  // ใช้ตอนหานัดชนกันของช่างคนเดียวกัน และตอนดึงตารางคิวรายวัน
+  @@index([providerId, startsAt])
+  @@index([status, startsAt])
+  @@index([customerId, startsAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  คิวรอ (Waitlist) — Phase 5
+// ─────────────────────────────────────────────────────────────
+
+model WaitlistEntry {
+  id          String         @id @default(cuid())
+  customerId  String
+  serviceId   String
+  /// ช่วงเวลาที่ลูกค้าบอกว่าสะดวก
+  windowStart DateTime
+  windowEnd   DateTime
+  status      WaitlistStatus @default(WAITING)
+
+  /// คิวที่เสนอไปให้ตอนนี้ และเส้นตายที่ต้องกดรับ
+  offeredSlotAt  DateTime?
+  offerExpiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id])
+  service  Service  @relation(fields: [serviceId], references: [id])
+
+  @@index([status, windowStart])
+  @@index([customerId])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  คอร์ส — Phase 6
+// ─────────────────────────────────────────────────────────────
+
+/// แม่แบบคอร์สที่ร้านขาย
+model CoursePackage {
+  id            String   @id @default(cuid())
+  name          String
+  serviceId     String?
+  totalSessions Int
+  /// อายุคอร์สนับเป็นวันจากวันที่ซื้อ
+  validDays     Int
+  price         Decimal  @db.Decimal(10, 2)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  service   Service?         @relation(fields: [serviceId], references: [id])
+  purchases CustomerCourse[]
+
+  @@index([isActive])
+}
+
+/// คอร์สที่ลูกค้าซื้อไปแล้ว
+model CustomerCourse {
+  id           String   @id @default(cuid())
+  customerId   String
+  packageId    String
+  usedSessions Int      @default(0)
+  purchasedAt  DateTime @default(now())
+  expiresAt    DateTime
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  @@index([role])
+  customer     Customer      @relation(fields: [customerId], references: [id])
+  package      CoursePackage @relation(fields: [packageId], references: [id])
+  appointments Appointment[]
+
+  // ใช้ตอนกวาดหาคอร์สที่ใกล้หมดอายุทุกวัน
+  @@index([expiresAt])
+  @@index([customerId])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  แคมเปญดึงลูกค้ากลับ — Phase 6
+// ─────────────────────────────────────────────────────────────
+
+model Campaign {
+  id           String   @id @default(cuid())
+  name         String
+  /// ข้อความที่จะส่ง — ต้องไม่มีรายละเอียดการรักษา
+  message      String
+  /// ไม่มารับบริการเกินกี่วันถึงเข้าเกณฑ์
+  inactiveDays Int      @default(90)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  runs CampaignRun[]
+
+  @@index([isActive])
+}
+
+/// ส่งหาใครไปบ้าง แล้วเกิดอะไรขึ้นตามมา — ตารางนี้คือตัววัดว่าระบบทำเงินคืนได้เท่าไหร่
+model CampaignRun {
+  id         String    @id @default(cuid())
+  campaignId String
+  customerId String
+  sentAt     DateTime  @default(now())
+  /// กลับมาจองเมื่อไหร่ (null = ยังไม่กลับมา)
+  returnedAt DateTime?
+  /// รายได้จากการกลับมาครั้งแรกหลังได้รับข้อความ
+  revenue    Decimal?  @db.Decimal(10, 2)
+
+  campaign Campaign @relation(fields: [campaignId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  // กันส่งซ้ำคนเดิมในแคมเปญเดียวกัน
+  @@unique([campaignId, customerId])
+  @@index([sentAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  บันทึกข้อความ (audit trail)
+// ─────────────────────────────────────────────────────────────
+
+/// บันทึกทุกครั้งที่ระบบ "ตัดสินใจเกี่ยวกับการส่งข้อความ" ไม่ใช่เฉพาะตอนส่งสำเร็จ
+///
+/// แถวที่เป็น SKIPPED_NO_CONSENT คือหลักฐานว่าระบบเคารพความยินยอมจริง
+/// เปิดหน้านี้ให้เจ้าของคลินิกดูได้เลยตอนขาย
+model MessageLog {
+  id             String         @id @default(cuid())
+  customerId     String
+  appointmentId  String?
+  type           MsgType
+  deliveryStatus DeliveryStatus
+  /// รายละเอียดเพิ่มเติมตอนส่งไม่สำเร็จ
+  errorMessage   String?
+  sentAt         DateTime       @default(now())
+
+  customer    Customer     @relation(fields: [customerId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+
+  @@index([customerId, sentAt])
+  @@index([type, sentAt])
+  @@index([deliveryStatus, sentAt])
 }

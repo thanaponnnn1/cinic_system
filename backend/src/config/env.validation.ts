@@ -16,9 +16,9 @@ const envSchema = z.object({
 
   FRONTEND_URL: z.string().min(1).default('http://localhost:3000'),
 
-  // ยังไม่บังคับใน Phase 0 — Phase 1 (auth) จะเปลี่ยนเป็น required
-  JWT_ACCESS_SECRET: z.string().min(1).optional(),
-  JWT_REFRESH_SECRET: z.string().min(1).optional(),
+  // ความยาวขั้นต่ำ 32 ตัวอักษร — secret สั้น ๆ เดาได้ และนี่คือกุญแจเข้าถึงข้อมูลลูกค้าทั้งร้าน
+  JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET ต้องยาวอย่างน้อย 32 ตัวอักษร'),
+  JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET ต้องยาวอย่างน้อย 32 ตัวอักษร'),
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('7d'),
 
@@ -54,6 +54,13 @@ export function validateEnv(config: Record<string, unknown>): Env {
   if (env.TZ !== 'Asia/Bangkok') {
     console.warn(
       `[env] TZ ถูกตั้งเป็น "${env.TZ}" ไม่ใช่ Asia/Bangkok — งานตามเวลาจะเพี้ยนไปจากที่ร้านคาดหวัง`,
+    );
+  }
+
+  // ใช้ secret เดียวกันทั้งสองตัวจะทำให้ refresh token ถูกนำไปใช้แทน access token ได้
+  if (env.JWT_ACCESS_SECRET === env.JWT_REFRESH_SECRET) {
+    throw new Error(
+      'JWT_ACCESS_SECRET กับ JWT_REFRESH_SECRET ต้องเป็นคนละค่ากัน ไม่งั้น refresh token จะถูกใช้แทน access token ได้',
     );
   }
 

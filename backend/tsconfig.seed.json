@@ -1,0 +1,9 @@
+// tsconfig แยกสำหรับสคริปต์ seed เพราะไฟล์อยู่ใน prisma/ ซึ่งอยู่นอก rootDir ของแอปหลัก
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true
+  },
+  "include": ["prisma/**/*.ts", "src/**/*"]
+}

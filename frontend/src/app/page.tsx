@@ -9,7 +9,7 @@ const PHASES = [
     no: 1,
     name: 'Auth + CRUD ฐาน',
     detail: 'สิทธิ์ 3 ระดับ · ลูกค้า · ช่าง · บริการ',
-    done: false,
+    done: true,
   },
   {
     no: 2,

@@ -3,8 +3,12 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { BRAND_INFO, type DeepHealthResponse, type HealthResponse } from '@clinicq/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { APP_VERSION } from '../common/app-version';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('ระบบ')
+// เปิดสาธารณะโดยตั้งใจ — uptime monitor ภายนอกยิงเข้ามาโดยไม่มีโทเคน
+// และไม่มีข้อมูลส่วนบุคคลใดถูกเปิดเผยจาก endpoint ชุดนี้
+@Public()
 @Controller('health')
 export class HealthController {
   constructor(private readonly prisma: PrismaService) {}
