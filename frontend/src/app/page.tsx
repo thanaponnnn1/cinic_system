@@ -15,7 +15,7 @@ const PHASES = [
     no: 2,
     name: 'Appointment Engine',
     detail: 'ตารางนัด · state machine · กันจองซ้อน',
-    done: false,
+    done: true,
   },
   {
     no: 3,

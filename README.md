@@ -125,7 +125,7 @@ docs/             เอกสารแผนงานและข้อมู�
 
 - [x] **Phase 0** — วางราก: monorepo, Docker, Prisma, lint, health endpoint
 - [x] **Phase 1** — Auth + CRUD ฐาน (สิทธิ์ 3 ระดับ, ลูกค้า, ช่าง, บริการ)
-- [ ] **Phase 2** — Appointment Engine (state machine, กันจองซ้อน)
+- [x] **Phase 2** — Appointment Engine (state machine, กันจองซ้อน 2 ชั้น)
 - [ ] **Phase 3** — LINE Integration (ผูกบัญชี, Flex, ปุ่มยืนยัน/เลื่อนนัด)
 - [ ] **Phase 4** — เตือนนัดอัตโนมัติ + Demo Time Machine
 - [ ] **Phase 5** — คิวว่าง (Waitlist)
