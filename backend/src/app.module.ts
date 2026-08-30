@@ -18,6 +18,8 @@ import { DemoModule } from './demo/demo.module';
 import { WaitlistModule } from './waitlist/waitlist.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { CoursesModule } from './courses/courses.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { MessagesModule } from './messages/messages.module';
 
 @Module({
   imports: [
@@ -44,6 +46,8 @@ import { CoursesModule } from './courses/courses.module';
     WaitlistModule,
     CampaignsModule,
     CoursesModule,
+    DashboardModule,
+    MessagesModule,
   ],
 })
 export class AppModule {}
