@@ -180,6 +180,21 @@ function DemoPanel() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  /**
+   * กลับมาเดินตามเวลาจริง
+   *
+   * จำเป็นตอนไล่ทดสอบด้วยมือหลายรอบ เพราะการข้ามเวลาค้างไว้ทำให้รอบถัดไปเริ่มจากอนาคต
+   * แล้วผลที่เห็นจะอธิบายไม่ได้ว่ามาจากของที่เพิ่งทำหรือจากเวลาที่ค้างอยู่
+   */
+  const reset = useMutation({
+    mutationFn: () => apiPost<unknown>('demo/reset-clock'),
+    onSuccess: () => {
+      toast.success('กลับมาเดินตามเวลาจริงแล้ว');
+      void queryClient.invalidateQueries();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const digest = useMutation({
     mutationFn: () => apiPost<{ sent: boolean }>('demo/send-digest'),
     onSuccess: (result) =>
@@ -216,6 +231,18 @@ function DemoPanel() {
       >
         ส่งสรุปปิดร้าน
       </Button>
+
+      {clock.offsetMs > 0 && (
+        <Button
+          size="sm"
+          variant="ghost"
+          loading={reset.isPending}
+          onClick={() => reset.mutate()}
+          className="w-full"
+        >
+          กลับมาเวลาจริง (ข้ามไปแล้ว {Math.round(clock.offsetMs / 3_600_000)} ชม.)
+        </Button>
+      )}
     </div>
   );
 }
