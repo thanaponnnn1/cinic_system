@@ -2,6 +2,7 @@ import { validateEnv } from './env.validation';
 
 const BASE = {
   DATABASE_URL: 'postgresql://user:pw@localhost:5433/clinicq',
+  REDIS_URL: 'redis://localhost:6380',
   JWT_ACCESS_SECRET: 'a'.repeat(48),
   JWT_REFRESH_SECRET: 'b'.repeat(48),
   LINE_CHANNEL_ACCESS_TOKEN: 'token-จาก-line',
@@ -29,5 +30,13 @@ describe('validateEnv — ค่าของ LINE', () => {
     const { LINE_CHANNEL_ACCESS_TOKEN: _t, LINE_CHANNEL_SECRET: _s, ...rest } = BASE;
 
     expect(() => validateEnv({ ...rest, NODE_ENV: 'test' })).not.toThrow();
+  });
+});
+
+describe('validateEnv — Redis', () => {
+  it('ไม่ยอมให้แอปขึ้นเมื่อไม่มี REDIS_URL — ตั้งแต่ Phase 4 คิวงานเตือนนัดอยู่บน Redis', () => {
+    const { REDIS_URL: _omitted, ...withoutRedis } = BASE;
+
+    expect(() => validateEnv(withoutRedis)).toThrow(/REDIS_URL/);
   });
 });

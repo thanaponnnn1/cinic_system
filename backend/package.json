@@ -18,9 +18,14 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:format": "prisma format",
-    "db:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts"
+    "db:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
+    "worker": "ts-node -r tsconfig-paths/register src/main.worker.ts",
+    "worker:dev": "nest start --watch --entryFile main.worker",
+    "worker:prod": "node dist/main.worker.js"
   },
   "dependencies": {
+    "@bull-board/api": "^9.5.0",
+    "@bull-board/express": "^9.5.0",
     "@clinicq/shared": "workspace:*",
     "@line/bot-sdk": "^11.2.0",
     "@nestjs/common": "^11.2.3",
@@ -32,9 +37,12 @@
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "bcryptjs": "^3.0.3",
+    "bullmq": "^6.3.2",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "dotenv": "^17.4.2",
+    "express-basic-auth": "^1.2.1",
+    "ioredis": "^6.0.0",
     "pg": "^8.23.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",

@@ -24,6 +24,7 @@ import type {
 } from './dto/appointment-request.dto';
 import { ACTIVE_STATUSES, assertTransition, canTransition } from './appointment-state-machine';
 import type { LineActionResult } from './line-action.types';
+import { ReminderSchedulerService } from '../reminders/reminder-scheduler.service';
 import { bangkokDayRange, formatBangkokDate, formatBangkokTime } from '../common/bangkok-time';
 import type { Prisma } from '../generated/prisma/client';
 
@@ -33,6 +34,19 @@ const APPT_INCLUDE = {
   provider: { select: { id: true, name: true } },
   service: { select: { id: true, name: true, durationMin: true, price: true } },
 } satisfies Prisma.AppointmentInclude;
+
+/**
+ * สถานะที่ไม่ต้องเตือนอีกแล้ว
+ *
+ * รวมสถานะ "ขอเลื่อน" ไว้ด้วย เพราะลูกค้าบอกแล้วว่าจะไม่มาตามเวลาเดิม
+ * การส่งข้อความเตือนเวลาเดิมซ้ำเข้าไปมีแต่ทำให้สับสน
+ */
+const NO_REMINDER_STATUSES: readonly ApptStatus[] = [
+  ApptStatus.CANCELLED,
+  ApptStatus.NO_SHOW,
+  ApptStatus.COMPLETED,
+  ApptStatus.RESCHEDULE_REQUESTED,
+];
 
 /** รหัส error ของ Postgres ตอนชน exclusion constraint (นัดซ้อนกัน) */
 const PG_EXCLUSION_VIOLATION = '23P01';
@@ -44,7 +58,10 @@ const SLOT_CONSTRAINT_NAME = 'Appointment_provider_no_overlap';
 export class AppointmentsService {
   private readonly logger = new Logger(AppointmentsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly reminders: ReminderSchedulerService,
+  ) {}
 
   // ── อ่าน ────────────────────────────────────────────────
 
@@ -218,6 +235,8 @@ export class AppointmentsService {
     );
 
     this.logger.log(`สร้างนัด ${appt.id} · ${formatBangkokTime(appt.startsAt)}`);
+    await this.reminders.sync(appt.id, appt.startsAt);
+
     return AppointmentResponseDto.from(appt, viewerRole);
   }
 
@@ -278,6 +297,10 @@ export class AppointmentsService {
     );
 
     this.logger.log(`ย้ายนัด ${id} ไปเป็น ${appt.id} · ${formatBangkokTime(appt.startsAt)}`);
+    // ใบเดิมถูกยกเลิกไปแล้วใน transaction ข้างบน งานที่ตั้งไว้กับมันจึงต้องหายไปด้วย
+    await this.reminders.cancel(id);
+    await this.reminders.sync(appt.id, appt.startsAt);
+
     return AppointmentResponseDto.from(appt, viewerRole);
   }
 
@@ -343,6 +366,8 @@ export class AppointmentsService {
       });
     });
 
+    await this.reminders.cancel(id);
+
     return AppointmentResponseDto.from(appt, viewerRole);
   }
 
@@ -399,6 +424,10 @@ export class AppointmentsService {
 
     if (count === 0) return { status: 'unchanged', current };
 
+    if (NO_REMINDER_STATUSES.includes(to)) {
+      await this.reminders.cancel(appointmentId);
+    }
+
     return {
       status: 'ok',
       appointment: {
@@ -431,6 +460,10 @@ export class AppointmentsService {
         include: APPT_INCLUDE,
       });
     });
+
+    if (NO_REMINDER_STATUSES.includes(to)) {
+      await this.reminders.cancel(id);
+    }
 
     return AppointmentResponseDto.from(appt, viewerRole);
   }

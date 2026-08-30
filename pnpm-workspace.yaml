@@ -11,6 +11,7 @@ allowBuilds:
   '@parcel/watcher': true # ใช้โดย watch mode ตอน dev
   unrs-resolver: true # native resolver ของ ESLint
   '@scarf/scarf': false # เก็บสถิติการใช้งานส่งกลับผู้พัฒนา — ไม่จำเป็นกับเรา
+  msgpackr-extract: false # ตัวเร่ง native ของ msgpack ที่ BullMQ ใช้ — ไม่มีก็ทำงานได้ปกติ
 
 minimumReleaseAgeExclude:
   - zod@4.5.4

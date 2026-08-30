@@ -12,7 +12,8 @@ const envSchema = z.object({
   TZ: z.string().default('Asia/Bangkok'),
 
   DATABASE_URL: z.string().min(1, 'ต้องตั้งค่า DATABASE_URL'),
-  REDIS_URL: z.string().min(1).optional(),
+  // บังคับตั้งแต่ Phase 4 — คิวงานเตือนนัดและนาฬิกาเดโมอยู่บน Redis ทั้งคู่
+  REDIS_URL: z.string().min(1, 'ต้องตั้งค่า REDIS_URL'),
 
   FRONTEND_URL: z.string().min(1).default('http://localhost:3000'),
 
@@ -28,6 +29,10 @@ const envSchema = z.object({
   LINE_CHANNEL_SECRET: z.string().optional(),
   /// userId ของแอดมินร้าน — ไม่มีก็รันได้ แค่ไม่มีใครได้รับข้อความแจ้งเตือนฝั่งร้าน
   LINE_ADMIN_USER_ID: z.string().optional(),
+
+  // บัญชีเข้าหน้าจอคิวงาน /admin/queues — ไม่ตั้งค่า = ปิดหน้านั้นไปเลย
+  BULL_BOARD_USER: z.string().optional(),
+  BULL_BOARD_PASSWORD: z.string().optional(),
 
   DEMO_MODE: z
     .enum(['true', 'false'])

@@ -2,6 +2,7 @@ import { Test, type TestingModule } from '@nestjs/testing';
 import { ApptStatus } from '@clinicq/shared';
 import { AppointmentsService } from './appointments.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ReminderSchedulerService } from '../reminders/reminder-scheduler.service';
 
 /**
  * เส้นทางที่ลูกค้ากดปุ่มเองในแชท LINE
@@ -22,9 +23,10 @@ describe('AppointmentsService — ปุ่มใน LINE', () => {
   };
 
   const appointmentDb = { findUnique: jest.fn(), updateMany: jest.fn() };
+  const scheduler = { sync: jest.fn(), cancel: jest.fn() };
 
   beforeEach(async () => {
-    Object.values(appointmentDb).forEach((fn) => fn.mockReset());
+    [...Object.values(appointmentDb), ...Object.values(scheduler)].forEach((fn) => fn.mockReset());
     appointmentDb.findUnique.mockResolvedValue(appointment);
     appointmentDb.updateMany.mockResolvedValue({ count: 1 });
 
@@ -32,6 +34,7 @@ describe('AppointmentsService — ปุ่มใน LINE', () => {
       providers: [
         AppointmentsService,
         { provide: PrismaService, useValue: { appointment: appointmentDb } },
+        { provide: ReminderSchedulerService, useValue: scheduler },
       ],
     }).compile();
 
@@ -128,6 +131,20 @@ describe('AppointmentsService — ปุ่มใน LINE', () => {
 
       expect(result).toEqual({ status: 'invalid', current: ApptStatus.CONFIRMED });
       expect(appointmentDb.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('งานเตือนนัดหลังลูกค้ากดปุ่ม', () => {
+    it('ลูกค้ากดขอเลื่อนในแชทแล้วต้องหยุดเตือนเวลาเดิม เหมือนกับตอนพนักงานกดให้', async () => {
+      await service.requestRescheduleFromLine('appt_1', 'Uline1');
+
+      expect(scheduler.cancel).toHaveBeenCalledWith('appt_1');
+    });
+
+    it('ลูกค้ากดยืนยันแล้วงานเตือนก่อน 2 ชั่วโมงต้องยังอยู่', async () => {
+      await service.confirmFromLine('appt_1', 'Uline1');
+
+      expect(scheduler.cancel).not.toHaveBeenCalled();
     });
   });
 });

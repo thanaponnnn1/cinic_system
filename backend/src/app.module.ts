@@ -10,6 +10,11 @@ import { ServicesModule } from './services/services.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { LineModule } from './line/line.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { QueueModule } from './queue/queue.module';
+import { ClockModule } from './clock/clock.module';
+import { RemindersModule } from './reminders/reminders.module';
+import { DigestModule } from './digest/digest.module';
+import { DemoModule } from './demo/demo.module';
 
 @Module({
   imports: [
@@ -28,6 +33,11 @@ import { NotificationsModule } from './notifications/notifications.module';
     AppointmentsModule,
     LineModule,
     NotificationsModule,
+    QueueModule,
+    ClockModule,
+    RemindersModule,
+    DigestModule,
+    DemoModule,
   ],
 })
 export class AppModule {}

@@ -7,6 +7,7 @@ import { BRAND_INFO } from '@clinicq/shared';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { APP_VERSION } from './common/app-version';
+import { mountQueueDashboard } from './queue/queue-dashboard';
 
 async function bootstrap(): Promise<void> {
   // rawBody: true — webhook ของ LINE ต้องตรวจลายเซ็นจาก body ดิบตัวจริง
@@ -59,6 +60,9 @@ async function bootstrap(): Promise<void> {
     });
   }
 
+  // หน้าจอดูคิวงาน — เปิดเฉพาะเมื่อตั้งบัญชีไว้ เพราะหน้านี้เห็นและสั่งงานในคิวได้ทั้งหมด
+  mountQueueDashboard(app, config);
+
   app.enableShutdownHooks();
 
   await app.listen(port);
@@ -68,6 +72,9 @@ async function bootstrap(): Promise<void> {
   logger.log(`   Health   → http://localhost:${port}/health`);
   if (!isProduction) {
     logger.log(`   เอกสาร   → http://localhost:${port}/docs`);
+  }
+  if (config.get<string>('BULL_BOARD_USER')) {
+    logger.log(`   คิวงาน   → http://localhost:${port}/admin/queues`);
   }
   logger.log(`   เขตเวลา  → ${process.env.TZ ?? 'ไม่ได้ตั้งค่า'} (${new Date().toString()})`);
 }
