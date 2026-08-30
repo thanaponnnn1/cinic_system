@@ -7,13 +7,25 @@ import { REMINDERS_QUEUE } from '../reminders/reminder-schedule';
 import { QUEUE_CONNECTION, REMINDERS_QUEUE_TOKEN } from '../queue/queue.tokens';
 import type { Queue } from 'bullmq';
 import type { ReminderJobData } from '../reminders/reminder-scheduler.service';
-import { DAILY_DIGEST_JOB, HEARTBEAT_JOB, JobDispatcherService } from './job-dispatcher.service';
+import {
+  COURSE_EXPIRY_JOB,
+  DAILY_DIGEST_JOB,
+  HEARTBEAT_JOB,
+  JobDispatcherService,
+  WINBACK_JOB,
+} from './job-dispatcher.service';
 
 /** ส่งสรุปปิดร้านสามทุ่มตามเวลาไทย — หลังร้านปิดแต่ยังไม่ดึกเกินกว่าที่เจ้าของร้านจะอ่าน */
 const DAILY_DIGEST_CRON = '0 21 * * *';
 
 /** เต้นทุก 5 นาที ตัวเฝ้าระบบภายนอกจะจับได้เร็วเมื่อ worker ตาย (ใช้ต่อใน Phase 8) */
 const HEARTBEAT_CRON = '*/5 * * * *';
+
+/** ยิงแคมเปญดึงลูกค้ากลับสิบโมงเช้า — ร้านเปิดแล้ว ลูกค้าที่สนใจทักกลับมาได้ทันที */
+const WINBACK_CRON = '0 10 * * *';
+
+/** เตือนคอร์สใกล้หมดอายุเก้าโมง ก่อนแคมเปญหนึ่งชั่วโมง จะได้ไม่ยิงข้อความสองชนิดพร้อมกัน */
+const COURSE_EXPIRY_CRON = '0 9 * * *';
 
 /**
  * ตัวที่ทำให้ worker เป็น worker จริง ๆ
@@ -67,6 +79,18 @@ export class WorkerRunnerService implements OnModuleInit, OnApplicationShutdown 
       DAILY_DIGEST_JOB,
       { pattern: DAILY_DIGEST_CRON, tz: 'Asia/Bangkok' },
       { name: DAILY_DIGEST_JOB, opts: { removeOnComplete: { count: 30 } } },
+    );
+
+    await this.queue.upsertJobScheduler(
+      WINBACK_JOB,
+      { pattern: WINBACK_CRON, tz: 'Asia/Bangkok' },
+      { name: WINBACK_JOB, opts: { removeOnComplete: { count: 30 } } },
+    );
+
+    await this.queue.upsertJobScheduler(
+      COURSE_EXPIRY_JOB,
+      { pattern: COURSE_EXPIRY_CRON, tz: 'Asia/Bangkok' },
+      { name: COURSE_EXPIRY_JOB, opts: { removeOnComplete: { count: 30 } } },
     );
 
     await this.queue.upsertJobScheduler(

@@ -4,6 +4,8 @@ import { AppointmentsService } from './appointments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReminderSchedulerService } from '../reminders/reminder-scheduler.service';
 import { WaitlistQueueService } from '../waitlist/waitlist-queue.service';
+import { CampaignAttributionService } from '../campaigns/campaign-attribution.service';
+import { ClockService } from '../clock/clock.service';
 
 /**
  * เส้นทางที่ลูกค้ากดปุ่มเองในแชท LINE
@@ -37,6 +39,11 @@ describe('AppointmentsService — ปุ่มใน LINE', () => {
         { provide: PrismaService, useValue: { appointment: appointmentDb } },
         { provide: ReminderSchedulerService, useValue: scheduler },
         { provide: WaitlistQueueService, useValue: { publishOpenSlot: jest.fn() } },
+        {
+          provide: CampaignAttributionService,
+          useValue: { stampReturn: jest.fn(), stampRevenue: jest.fn() },
+        },
+        { provide: ClockService, useValue: { now: () => new Date('2026-09-01T03:00:00.000Z') } },
       ],
     }).compile();
 

@@ -4,6 +4,8 @@ import type { ReminderProcessorService } from '../reminders/reminder-processor.s
 import type { DigestService } from '../digest/digest.service';
 import type { WaitlistEngineService } from '../waitlist/waitlist-engine.service';
 import type { ClockService } from '../clock/clock.service';
+import type { WinbackService } from '../campaigns/winback.service';
+import type { CourseExpiryService } from '../courses/course-expiry.service';
 
 describe('JobDispatcherService', () => {
   const processor = { process: jest.fn() };
@@ -11,6 +13,8 @@ describe('JobDispatcherService', () => {
   const redis = { set: jest.fn() };
   const waitlist = { offerSlot: jest.fn(), expireOffers: jest.fn() };
   const clock = { refresh: jest.fn() };
+  const winback = { runActiveCampaigns: jest.fn() };
+  const courseExpiry = { notifyExpiring: jest.fn() };
 
   function build(): JobDispatcherService {
     return new JobDispatcherService(
@@ -19,6 +23,8 @@ describe('JobDispatcherService', () => {
       redis as never,
       waitlist as unknown as WaitlistEngineService,
       clock as unknown as ClockService,
+      winback as unknown as WinbackService,
+      courseExpiry as unknown as CourseExpiryService,
     );
   }
 
@@ -29,6 +35,10 @@ describe('JobDispatcherService', () => {
     redis.set.mockReset().mockResolvedValue('OK');
     waitlist.offerSlot.mockReset().mockResolvedValue(2);
     waitlist.expireOffers.mockReset().mockResolvedValue(0);
+    winback.runActiveCampaigns.mockReset().mockResolvedValue([]);
+    courseExpiry.notifyExpiring
+      .mockReset()
+      .mockResolvedValue({ notified: 0, skipped: 0, failed: 0 });
   });
 
   it('ส่งงานเตือนล่วงหน้า 1 วันให้ตัวประมวลผลข้อความ', async () => {
@@ -65,6 +75,20 @@ describe('JobDispatcherService', () => {
     expect(redis.set).toHaveBeenCalledWith(HEARTBEAT_KEY, expect.any(String));
   });
 
+  it('งานแคมเปญรายวันยิงทุกแคมเปญที่เปิดอยู่ ไม่ใช่แคมเปญเดียว', async () => {
+    await build().dispatch('winback-campaign', undefined);
+
+    expect(winback.runActiveCampaigns).toHaveBeenCalled();
+    expect(courseExpiry.notifyExpiring).not.toHaveBeenCalled();
+  });
+
+  it('งานเตือนคอร์สใกล้หมดอายุเรียกตัวเตือนคอร์ส ไม่ใช่ตัวยิงแคมเปญ', async () => {
+    await build().dispatch('course-expiry', undefined);
+
+    expect(courseExpiry.notifyExpiring).toHaveBeenCalled();
+    expect(winback.runActiveCampaigns).not.toHaveBeenCalled();
+  });
+
   it('งานชนิดที่ยังไม่รู้จักต้องไม่ทำให้ worker ล้มทั้งตัว', async () => {
     await expect(build().dispatch('งานจากอนาคต', undefined)).resolves.toBeNull();
   });
@@ -76,6 +100,8 @@ describe('JobDispatcherService — งานของคิวรอ', () => {
   const redis = { set: jest.fn() };
   const waitlist = { offerSlot: jest.fn(), expireOffers: jest.fn() };
   const clock = { refresh: jest.fn() };
+  const winback = { runActiveCampaigns: jest.fn() };
+  const courseExpiry = { notifyExpiring: jest.fn() };
 
   function build(): JobDispatcherService {
     return new JobDispatcherService(
@@ -84,6 +110,8 @@ describe('JobDispatcherService — งานของคิวรอ', () => {
       redis as never,
       waitlist as unknown as WaitlistEngineService,
       clock as unknown as ClockService,
+      winback as unknown as WinbackService,
+      courseExpiry as unknown as CourseExpiryService,
     );
   }
 

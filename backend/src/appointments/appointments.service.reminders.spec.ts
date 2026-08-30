@@ -4,6 +4,8 @@ import { AppointmentsService } from './appointments.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ReminderSchedulerService } from '../reminders/reminder-scheduler.service';
 import { WaitlistQueueService } from '../waitlist/waitlist-queue.service';
+import { CampaignAttributionService } from '../campaigns/campaign-attribution.service';
+import { ClockService } from '../clock/clock.service';
 
 /**
  * นัดกับงานเตือนต้องเดินไปด้วยกันเสมอ
@@ -27,12 +29,15 @@ describe('AppointmentsService — ซิงก์งานเตือนนั�
   const prisma = { $transaction: jest.fn() };
   const scheduler = { sync: jest.fn(), cancel: jest.fn() };
   const waitlistQueue = { publishOpenSlot: jest.fn() };
+  const attribution = { stampReturn: jest.fn(), stampRevenue: jest.fn() };
 
   beforeEach(async () => {
     prisma.$transaction.mockReset().mockResolvedValue(created);
     scheduler.sync.mockReset().mockResolvedValue(undefined);
     scheduler.cancel.mockReset().mockResolvedValue(undefined);
     waitlistQueue.publishOpenSlot.mockReset().mockResolvedValue(undefined);
+    attribution.stampReturn.mockReset().mockResolvedValue(0);
+    attribution.stampRevenue.mockReset().mockResolvedValue(false);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -40,6 +45,8 @@ describe('AppointmentsService — ซิงก์งานเตือนนั�
         { provide: PrismaService, useValue: prisma },
         { provide: ReminderSchedulerService, useValue: scheduler },
         { provide: WaitlistQueueService, useValue: waitlistQueue },
+        { provide: CampaignAttributionService, useValue: attribution },
+        { provide: ClockService, useValue: { now: () => new Date('2026-09-01T03:00:00.000Z') } },
       ],
     }).compile();
 

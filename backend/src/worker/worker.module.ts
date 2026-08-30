@@ -7,6 +7,8 @@ import { ClockModule } from '../clock/clock.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { DigestModule } from '../digest/digest.module';
 import { WaitlistModule } from '../waitlist/waitlist.module';
+import { CampaignsModule } from '../campaigns/campaigns.module';
+import { CoursesModule } from '../courses/courses.module';
 import { ReminderProcessorService } from '../reminders/reminder-processor.service';
 import { JobDispatcherService } from './job-dispatcher.service';
 import { WorkerRunnerService } from './worker-runner.service';
@@ -26,6 +28,8 @@ import { WorkerRunnerService } from './worker-runner.service';
     NotificationsModule,
     DigestModule,
     WaitlistModule,
+    CampaignsModule,
+    CoursesModule,
   ],
   providers: [ReminderProcessorService, JobDispatcherService, WorkerRunnerService],
 })

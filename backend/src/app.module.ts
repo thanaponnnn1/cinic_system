@@ -16,6 +16,8 @@ import { RemindersModule } from './reminders/reminders.module';
 import { DigestModule } from './digest/digest.module';
 import { DemoModule } from './demo/demo.module';
 import { WaitlistModule } from './waitlist/waitlist.module';
+import { CampaignsModule } from './campaigns/campaigns.module';
+import { CoursesModule } from './courses/courses.module';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { WaitlistModule } from './waitlist/waitlist.module';
     DigestModule,
     DemoModule,
     WaitlistModule,
+    CampaignsModule,
+    CoursesModule,
   ],
 })
 export class AppModule {}

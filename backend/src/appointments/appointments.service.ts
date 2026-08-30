@@ -26,6 +26,8 @@ import { ACTIVE_STATUSES, assertTransition, canTransition } from './appointment-
 import type { LineActionResult } from './line-action.types';
 import { ReminderSchedulerService } from '../reminders/reminder-scheduler.service';
 import { WaitlistQueueService } from '../waitlist/waitlist-queue.service';
+import { CampaignAttributionService } from '../campaigns/campaign-attribution.service';
+import { ClockService } from '../clock/clock.service';
 import { bangkokDayRange, formatBangkokDate, formatBangkokTime } from '../common/bangkok-time';
 import type { Prisma } from '../generated/prisma/client';
 
@@ -63,6 +65,8 @@ export class AppointmentsService {
     private readonly prisma: PrismaService,
     private readonly reminders: ReminderSchedulerService,
     private readonly waitlistQueue: WaitlistQueueService,
+    private readonly attribution: CampaignAttributionService,
+    private readonly clock: ClockService,
   ) {}
 
   // ── อ่าน ────────────────────────────────────────────────
@@ -238,6 +242,8 @@ export class AppointmentsService {
 
     this.logger.log(`สร้างนัด ${appt.id} · ${formatBangkokTime(appt.startsAt)}`);
     await this.reminders.sync(appt.id, appt.startsAt);
+    // ลูกค้าที่เคยได้รับข้อความแคมเปญแล้วกลับมาจอง = ผลของแคมเปญ (Phase 6)
+    await this.attribution.stampReturn(appt.customerId, appt.createdAt);
 
     return AppointmentResponseDto.from(appt, viewerRole);
   }
@@ -386,6 +392,8 @@ export class AppointmentsService {
     });
 
     await this.reminders.cancel(id);
+    // รายได้ของการมาครั้งแรกหลังกลับมา คือตัวเลข ROI ที่หน้าแคมเปญเอาไปแสดง (Phase 6)
+    await this.attribution.stampRevenue(appt.customerId, Number(appt.service.price.toString()));
 
     return AppointmentResponseDto.from(appt, viewerRole);
   }
@@ -592,7 +600,8 @@ export class AppointmentsService {
       throw new BadRequestException(`คอร์ส "${course.package.name}" ใช้ครบทุกครั้งแล้ว`);
     }
 
-    if (course.expiresAt < new Date()) {
+    // ใช้เวลาของระบบ ไม่ใช่นาฬิกาเครื่อง — ตอนเดโมมีการกดข้ามเวลาเพื่อโชว์คอร์สที่หมดอายุ
+    if (course.expiresAt < this.clock.now()) {
       throw new BadRequestException(
         `คอร์ส "${course.package.name}" หมดอายุแล้วเมื่อ ${formatBangkokDate(course.expiresAt)}`,
       );

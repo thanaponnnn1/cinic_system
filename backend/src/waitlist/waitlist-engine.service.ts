@@ -6,6 +6,7 @@ import { LineMessagingService } from '../line/line-messaging.service';
 import { ClockService } from '../clock/clock.service';
 import { buildSlotOfferFlex } from '../line/slot-offer-flex';
 import { formatBangkokTime, formatThaiDate } from '../common/bangkok-time';
+import { CampaignAttributionService } from '../campaigns/campaign-attribution.service';
 import type { Prisma } from '../generated/prisma/client';
 
 /** ให้เวลากดรับ 30 นาที — สั้นพอที่คิวจะไม่ถูกแช่ไว้เฉย ๆ ยาวพอที่คนทำงานอยู่จะเห็นข้อความ */
@@ -55,6 +56,7 @@ export class WaitlistEngineService {
     private readonly line: LineMessagingService,
     private readonly clock: ClockService,
     private readonly config: ConfigService,
+    private readonly attribution: CampaignAttributionService,
   ) {}
 
   /**
@@ -166,7 +168,7 @@ export class WaitlistEngineService {
     const slotEnd = new Date(slotStart.getTime() + entry.service.durationMin * 60_000);
     const providerId = entry.offeredProviderId;
 
-    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const result = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // ล็อกช่างก่อน ทำให้คนที่กดพร้อมกันเข้ามาทีละคนจริง ๆ ไม่ใช่แค่หวังว่าจะไม่ชน
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${providerId}))`;
 
@@ -229,6 +231,14 @@ export class WaitlistEngineService {
         serviceName: entry.service.name,
       } as ClaimResult;
     });
+
+    // การกดรับคิวว่างก็คือการกลับมาจอง — ลูกค้าที่เคยได้รับข้อความแคมเปญต้องถูกนับผลด้วย
+    // ไม่ใช่นับเฉพาะคนที่พนักงานเป็นคนสร้างนัดให้ (Phase 6)
+    if (result.status === 'ok') {
+      await this.attribution.stampReturn(entry.customer.id, this.clock.now());
+    }
+
+    return result;
   }
 
   /**

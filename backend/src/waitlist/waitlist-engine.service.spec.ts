@@ -4,6 +4,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { LineMessagingService } from '../line/line-messaging.service';
 import type { ClockService } from '../clock/clock.service';
 import type { ConfigService } from '@nestjs/config';
+import type { CampaignAttributionService } from '../campaigns/campaign-attribution.service';
 
 const NOW = new Date('2026-09-01T03:00:00.000Z'); // 10:00 น. ตามเวลาไทย
 const SLOT_START = new Date('2026-09-02T03:30:00.000Z'); // 10:30 น. วันถัดไป
@@ -50,6 +51,7 @@ describe('WaitlistEngineService', () => {
   const messageLogDb = { create: jest.fn() };
   const line = { push: jest.fn(), pushText: jest.fn() };
   const clock = { now: () => NOW, refresh: jest.fn() };
+  const attribution = { stampReturn: jest.fn(), stampRevenue: jest.fn() };
 
   const prisma = {
     waitlistEntry: waitlistDb,
@@ -67,6 +69,7 @@ describe('WaitlistEngineService', () => {
       line as unknown as LineMessagingService,
       clock as unknown as ClockService,
       { get: () => 'Uadmin' } as unknown as ConfigService,
+      attribution as unknown as CampaignAttributionService,
     );
   }
 
@@ -80,6 +83,7 @@ describe('WaitlistEngineService', () => {
     appointmentDb.findFirst.mockResolvedValue(null);
     appointmentDb.create.mockResolvedValue({ id: 'appt_new', startsAt: SLOT_START });
     providerDb.findUnique.mockResolvedValue({ id: 'prov_1', name: 'คุณแอน' });
+    attribution.stampReturn.mockResolvedValue(0);
     line.push.mockResolvedValue(true);
     line.pushText.mockResolvedValue(true);
   });

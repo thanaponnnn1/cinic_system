@@ -239,6 +239,110 @@ function daysAgo(days: number): Date {
   return new Date(Date.now() - days * 86_400_000);
 }
 
+/**
+ * คอร์สที่ร้านขาย — Phase 6
+ *
+ * ผูกกับบริการที่มีอยู่แล้ว เพื่อให้หน้านัดเลือก "ตัดครั้งจากคอร์ส" ได้ตรงกับบริการที่จอง
+ */
+const COURSE_PACKAGES = [
+  {
+    name: 'คอร์สทรีตเมนต์ผิวหน้า 10 ครั้ง',
+    serviceName: 'ทรีตเมนต์บำรุงผิวหน้า',
+    totalSessions: 10,
+    validDays: 180,
+    price: 12000,
+  },
+  {
+    name: 'คอร์สดูแลเส้นผม 6 ครั้ง',
+    serviceName: 'ทรีตเมนต์บำรุงผม',
+    totalSessions: 6,
+    validDays: 120,
+    price: 11000,
+  },
+  {
+    name: 'คอร์สนวดหน้าผ่อนคลาย 5 ครั้ง',
+    serviceName: 'นวดหน้าผ่อนคลาย',
+    totalSessions: 5,
+    validDays: 90,
+    price: 2500,
+  },
+];
+
+/**
+ * คอร์สที่ลูกค้าซื้อไปแล้ว — จงใจให้มีทั้งสามกลุ่มที่ระบบต้องแยกให้ออก
+ *
+ * - ใกล้หมดอายุและยังมีครั้งเหลือ  → ต้องขึ้นในลิสต์ที่ร้านควรโทรตาม และได้รับข้อความเตือน
+ * - หมดอายุแล้วทั้งที่ยังมีครั้งเหลือ → ปัญหาที่ระบบนี้มีไว้กัน (เงินที่กลายเป็นข้อร้องเรียน)
+ * - ใช้ครบแล้ว                      → ต้องไม่ถูกทวง แม้วันหมดอายุจะใกล้แค่ไหน
+ *
+ * daysToExpiry ติดลบ = หมดอายุไปแล้วกี่วัน
+ */
+const COURSE_PURCHASES = [
+  // ใกล้หมดอายุและยังมีครั้งเหลือ — 4 ใบ
+  { phone: '0810000001', package: 0, daysToExpiry: 9, usedSessions: 6 },
+  { phone: '0810000002', package: 1, daysToExpiry: 17, usedSessions: 3 },
+  { phone: '0810000005', package: 2, daysToExpiry: 24, usedSessions: 1 },
+  { phone: '0810000008', package: 0, daysToExpiry: 29, usedSessions: 4 },
+
+  // หมดอายุไปแล้วทั้งที่ยังใช้ไม่ครบ — 2 ใบ
+  { phone: '0810000014', package: 0, daysToExpiry: -20, usedSessions: 3 },
+  { phone: '0810000016', package: 2, daysToExpiry: -55, usedSessions: 1 },
+
+  // ยังมีเวลาเหลืออีกนาน
+  { phone: '0810000003', package: 0, daysToExpiry: 120, usedSessions: 2 },
+  { phone: '0810000004', package: 1, daysToExpiry: 95, usedSessions: 1 },
+  { phone: '0810000006', package: 0, daysToExpiry: 150, usedSessions: 0 },
+  { phone: '0810000007', package: 2, daysToExpiry: 60, usedSessions: 2 },
+  { phone: '0810000009', package: 1, daysToExpiry: 88, usedSessions: 4 },
+  { phone: '0810000010', package: 0, daysToExpiry: 170, usedSessions: 1 },
+
+  // ใช้ครบทุกครั้งแล้ว — ใกล้หมดอายุแค่ไหนก็ต้องไม่ถูกทวง
+  { phone: '0810000011', package: 2, daysToExpiry: 12, usedSessions: 5 },
+  { phone: '0810000012', package: 0, daysToExpiry: 21, usedSessions: 10 },
+  { phone: '0810000013', package: 1, daysToExpiry: 40, usedSessions: 6 },
+];
+
+/** แคมเปญดึงลูกค้ากลับ — Phase 6 */
+const CAMPAIGN = {
+  name: 'ดึงลูกค้าที่หายไป — ส่วนลด 15%',
+  message:
+    '💌 คิดถึงคุณ {name} จังเลยค่ะ\n' +
+    'ไม่ได้เจอกันนานแล้ว THNP Clinic มีส่วนลดพิเศษ 15% สำหรับคุณโดยเฉพาะ ถึงสิ้นเดือนนี้\n' +
+    'ทักแชทนี้เพื่อจองคิวได้เลยค่ะ',
+  inactiveDays: 90,
+};
+
+/**
+ * รอบที่เคยส่งไปแล้วของแคมเปญ — ส่ง 12 กลับมา 4 รายได้ 6,800 บาท
+ *
+ * ใส่ไว้เพื่อให้หน้าวัดผล ROI มีเรื่องเล่าตั้งแต่วันแรกที่เปิดเดโม ไม่ใช่หน้าว่างที่ต้องรอ
+ * ให้ลูกค้าจินตนาการเอาเอง — ตัวเลขชุดนี้คือสไลด์ที่ใช้ปิดการขาย
+ */
+const CAMPAIGN_RUNS: {
+  phone: string;
+  sentDaysAgo: number;
+  /** ไม่ระบุ = ยังไม่กลับมา */
+  returnedDaysAgo?: number;
+  revenue?: number;
+}[] = [
+  { phone: '0810000011', sentDaysAgo: 40, returnedDaysAgo: 33, revenue: 1500 },
+  { phone: '0810000012', sentDaysAgo: 40, returnedDaysAgo: 28, revenue: 2200 },
+  { phone: '0810000013', sentDaysAgo: 40, returnedDaysAgo: 21, revenue: 2200 },
+  { phone: '0810000014', sentDaysAgo: 40, returnedDaysAgo: 12, revenue: 900 },
+  { phone: '0810000015', sentDaysAgo: 40 },
+  { phone: '0810000016', sentDaysAgo: 40 },
+  { phone: '0810000001', sentDaysAgo: 40 },
+  { phone: '0810000002', sentDaysAgo: 40 },
+  { phone: '0810000003', sentDaysAgo: 40 },
+  { phone: '0810000004', sentDaysAgo: 40 },
+  { phone: '0810000005', sentDaysAgo: 40 },
+  { phone: '0810000018', sentDaysAgo: 40 },
+];
+
+function daysFromNow(days: number): Date {
+  return new Date(Date.now() + days * 86_400_000);
+}
+
 async function main(): Promise<void> {
   console.log('เริ่มใส่ข้อมูลตั้งต้น...\n');
 
@@ -291,6 +395,89 @@ async function main(): Promise<void> {
       },
     });
   }
+
+  // ── คอร์ส (Phase 6) ──────────────────────────────────────
+
+  const packageIds: string[] = [];
+
+  for (const pkg of COURSE_PACKAGES) {
+    const service = await prisma.service.findFirst({ where: { name: pkg.serviceName } });
+    const data = {
+      name: pkg.name,
+      serviceId: service?.id ?? null,
+      totalSessions: pkg.totalSessions,
+      validDays: pkg.validDays,
+      price: pkg.price,
+    };
+
+    const existing = await prisma.coursePackage.findFirst({ where: { name: pkg.name } });
+    const saved = existing
+      ? await prisma.coursePackage.update({ where: { id: existing.id }, data })
+      : await prisma.coursePackage.create({ data });
+
+    packageIds.push(saved.id);
+  }
+  console.log(`คอร์สที่ขาย    ${COURSE_PACKAGES.length} แบบ`);
+
+  for (const purchase of COURSE_PURCHASES) {
+    const customer = await prisma.customer.findUnique({ where: { phone: purchase.phone } });
+    const packageId = packageIds[purchase.package];
+    if (!customer) continue;
+
+    // ซื้อเมื่อไหร่ย้อนกลับจากวันหมดอายุที่อยากให้เป็น เพื่อให้เดโมมีเคสครบทุกกลุ่มเสมอ
+    const expiresAt = daysFromNow(purchase.daysToExpiry);
+    const purchasedAt = new Date(
+      expiresAt.getTime() - COURSE_PACKAGES[purchase.package].validDays * 86_400_000,
+    );
+
+    const existing = await prisma.customerCourse.findFirst({
+      where: { customerId: customer.id, packageId },
+    });
+
+    if (existing) continue;
+
+    await prisma.customerCourse.create({
+      data: {
+        customerId: customer.id,
+        packageId,
+        usedSessions: purchase.usedSessions,
+        purchasedAt,
+        expiresAt,
+      },
+    });
+  }
+  console.log(`คอร์สที่ขายไป  ${COURSE_PURCHASES.length} ใบ`);
+
+  // ── แคมเปญดึงลูกค้ากลับ (Phase 6) ────────────────────────
+
+  const existingCampaign = await prisma.campaign.findFirst({ where: { name: CAMPAIGN.name } });
+  const campaign = existingCampaign
+    ? await prisma.campaign.update({ where: { id: existingCampaign.id }, data: CAMPAIGN })
+    : await prisma.campaign.create({ data: CAMPAIGN });
+
+  for (const run of CAMPAIGN_RUNS) {
+    const customer = await prisma.customer.findUnique({ where: { phone: run.phone } });
+    if (!customer) continue;
+
+    await prisma.campaignRun.upsert({
+      where: { campaignId_customerId: { campaignId: campaign.id, customerId: customer.id } },
+      update: {},
+      create: {
+        campaignId: campaign.id,
+        customerId: customer.id,
+        sentAt: daysAgo(run.sentDaysAgo),
+        returnedAt: run.returnedDaysAgo === undefined ? null : daysAgo(run.returnedDaysAgo),
+        revenue: run.revenue ?? null,
+      },
+    });
+  }
+
+  const returned = CAMPAIGN_RUNS.filter((run) => run.returnedDaysAgo !== undefined);
+  const campaignRevenue = returned.reduce((sum, run) => sum + (run.revenue ?? 0), 0);
+  console.log(
+    `แคมเปญ         ส่ง ${CAMPAIGN_RUNS.length} · กลับมา ${returned.length} · ` +
+      `รายได้ ${campaignRevenue.toLocaleString('th-TH')} บาท`,
+  );
 
   const withLine = CUSTOMERS.filter((c) => c.line).length;
   const inactive90 = CUSTOMERS.filter(

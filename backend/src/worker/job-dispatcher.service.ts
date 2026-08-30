@@ -5,6 +5,8 @@ import { QUEUE_CONNECTION } from '../queue/queue.tokens';
 import { ReminderProcessorService } from '../reminders/reminder-processor.service';
 import type { ReminderJobData } from '../reminders/reminder-scheduler.service';
 import { DigestService } from '../digest/digest.service';
+import { WinbackService } from '../campaigns/winback.service';
+import { CourseExpiryService } from '../courses/course-expiry.service';
 import { WaitlistEngineService } from '../waitlist/waitlist-engine.service';
 import { ClockService } from '../clock/clock.service';
 import {
@@ -16,6 +18,8 @@ import {
 /** ชื่องานตามรอบเวลา */
 export const DAILY_DIGEST_JOB = 'daily-digest';
 export const HEARTBEAT_JOB = 'heartbeat';
+export const WINBACK_JOB = 'winback-campaign';
+export const COURSE_EXPIRY_JOB = 'course-expiry';
 
 /** คีย์ที่ heartbeat เขียนเวลาล่าสุดไว้ — Phase 8 จะมีตัวเฝ้าระบบมาอ่านค่านี้ */
 export const HEARTBEAT_KEY = 'clinicq:worker:heartbeat';
@@ -35,6 +39,8 @@ export class JobDispatcherService {
     @Inject(QUEUE_CONNECTION) private readonly redis: IORedis,
     private readonly waitlist: WaitlistEngineService,
     private readonly clock: ClockService,
+    private readonly winback: WinbackService,
+    private readonly courseExpiry: CourseExpiryService,
   ) {}
 
   async dispatch(
@@ -68,6 +74,14 @@ export class JobDispatcherService {
         slotStart: new Date(slot.slotStart),
         slotEnd: new Date(slot.slotEnd),
       });
+    }
+
+    if (name === WINBACK_JOB) {
+      return this.winback.runActiveCampaigns();
+    }
+
+    if (name === COURSE_EXPIRY_JOB) {
+      return this.courseExpiry.notifyExpiring();
     }
 
     if (name === WAITLIST_EXPIRE_JOB) {
