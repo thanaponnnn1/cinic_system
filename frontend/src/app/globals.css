@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+/**
+ * Brand tokens — ค่าสีชุดเดียวกับ shared/src/brand.ts
+ * (สุ่มวัดมาจากไฟล์โลโก้จริง ไม่ใช่สีที่เดาเอง)
+ *
+ * ถ้าจะแก้สีแบรนด์ ให้แก้ที่ shared/src/brand.ts ด้วยเสมอ เพราะ backend
+ * ใช้ค่าจากที่นั่นตอนประกอบ LINE Flex Message
+ */
+@theme {
+  --color-navy-950: #060d15;
+  --color-navy-900: #0b1523;
+  --color-navy-800: #0e1b2c;
+  --color-navy-700: #142132;
+  --color-navy-600: #1c2d42;
+  --color-navy-500: #2a3e56;
+  --color-navy-400: #3d5470;
+
+  --color-gold-100: #fcf1c4;
+  --color-gold-200: #f0dfae;
+  --color-gold-300: #e3cd9b;
+  --color-gold-400: #d3bc88;
+  --color-gold-500: #c0a472;
+  --color-gold-600: #a98c5c;
+  --color-gold-700: #967a4b;
+
+  --color-status-booked: #e0b33c;
+  --color-status-confirmed: #3fb984;
+  --color-status-reschedule: #e8863c;
+  --color-status-cancelled: #6b7a8f;
+  --color-status-noshow: #d9534f;
+  --color-status-completed: #4a6fa5;
+
+  --font-sans: var(--font-noto-thai), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-playfair), ui-serif, Georgia, serif;
+}
+
+html,
+body {
+  background-color: var(--color-navy-950);
+  color: var(--color-gold-100);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ไล่เฉดทองแบบเดียวกับตัวอักษรในโลโก้ */
+.text-gold-gradient {
+  background: linear-gradient(
+    135deg,
+    var(--color-gold-600) 0%,
+    var(--color-gold-100) 45%,
+    var(--color-gold-500) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

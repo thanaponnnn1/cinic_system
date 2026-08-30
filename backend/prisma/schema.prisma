@@ -1,0 +1,40 @@
+// THNP ClinicQ — โครงสร้างฐานข้อมูล
+//
+// Phase 0 มีแค่ตาราง User เพื่อให้ pipeline (migrate → generate → boot) เดินได้ครบรอบก่อน
+// ตารางที่เหลือ (Customer, Appointment, Waitlist, Course, MessageLog, Campaign)
+// จะเพิ่มใน Phase 1 ตาม docs/plan-clinic-demo.md ข้อ 4
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+// Prisma 7 ย้าย connection string ออกจากไฟล์นี้ไปไว้ที่ prisma.config.ts
+// และฝั่ง client ต่อฐานข้อมูลผ่าน driver adapter (ดู src/prisma/prisma.service.ts)
+datasource db {
+  provider = "postgresql"
+}
+
+/// สิทธิ์ผู้ใช้ฝั่งร้าน
+/// VIEWER เห็นตารางนัดได้ แต่ต้องไม่เห็นเบอร์โทร/ประวัติลูกค้า — ข้อกำหนด PDPA
+enum Role {
+  ADMIN
+  STAFF
+  VIEWER
+}
+
+/// ผู้ใช้ฝั่งร้าน (เจ้าของ / พนักงาน) — ไม่ใช่ลูกค้าของคลินิก
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(STAFF)
+  isActive     Boolean  @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([role])
+}

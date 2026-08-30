@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+.next/
+out/
+coverage/
+pnpm-lock.yaml
+*.min.js
+*.min.css
+docs/
+backend/prisma/migrations/
+
+# ไฟล์ที่เครื่องมือสร้างเอง — จะถูกเขียนทับทุกครั้งที่ generate
+backend/src/generated/
+frontend/next-env.d.ts
+frontend/AGENTS.md
+frontend/CLAUDE.md

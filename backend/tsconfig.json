@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "rootDir": "./src",
+    "declaration": false,
+    "removeComments": true,
+    "sourceMap": true,
+    "incremental": true,
+    // ต้องเก็บไว้ใน dist/ เท่านั้น — nest-cli ตั้ง deleteOutDir ไว้ ถ้าไฟล์นี้อยู่นอก dist
+    // tsc จะเข้าใจว่า output ยังครบอยู่แล้วไม่ emit อะไรเลย จนได้ error หา dist/main ไม่เจอ
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // NestJS ต้องใช้ decorator metadata สำหรับ DI และ validation
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "strictBindCallApply": true,
+    "noFallthroughCasesInSwitch": true,
+    // ปิดไว้เพราะ DI ของ Nest กำหนดค่าให้ property หลัง constructor
+    "strictPropertyInitialization": false,
+
+    "paths": {
+      "src/*": ["src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.spec.ts"]
+}

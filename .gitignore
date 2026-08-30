@@ -1,0 +1,43 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# env — เก็บเฉพาะ .env.example เข้า git เท่านั้น
+.env
+.env.*
+!.env.example
+
+# prisma
+backend/prisma/*.db
+backend/prisma/*.db-journal
+# client ที่ Prisma สร้างเอง — สร้างใหม่อัตโนมัติตอน pnpm install (postinstall)
+backend/src/generated/
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+logs/
+
+# test / coverage
+coverage/
+.nyc_output/
+
+# editor / os
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# misc
+.cache/
+.turbo/

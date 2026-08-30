@@ -1,0 +1,47 @@
+{
+  "name": "thnp-clinicq",
+  "version": "0.1.0",
+  "private": true,
+  "description": "THNP ClinicQ — ระบบนัดหมาย + ดูแลลูกค้าผ่าน LINE OA สำหรับคลินิกและร้านเสริมสวย",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "packageManager": "pnpm@11.20.0",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d",
+    "db:migrate": "pnpm --filter @clinicq/backend db:migrate",
+    "db:studio": "pnpm --filter @clinicq/backend db:studio",
+    "db:format": "pnpm --filter @clinicq/backend db:format",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.9.1",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.4.1",
+    "prettier": "^3.9.6",
+    "prettier-plugin-tailwindcss": "^0.8.1",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.68.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,mts,cts}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{js,jsx,mjs,cjs,json,md,yml,yaml,css}": [
+      "prettier --write"
+    ]
+  }
+}

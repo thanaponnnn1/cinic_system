@@ -1,0 +1,16 @@
+packages:
+  - 'shared'
+  - 'backend'
+  - 'frontend'
+
+# pnpm บล็อก postinstall script ของ dependency ทั้งหมดโดย default
+# ตัวที่ตั้ง true คือตัวที่ต้องรัน postinstall จริง ไม่งั้นใช้งานไม่ได้
+allowBuilds:
+  '@prisma/engines': true # ดาวน์โหลด query engine — ถ้าไม่รัน Prisma จะใช้ไม่ได้เลย
+  prisma: true # เตรียม CLI
+  '@parcel/watcher': true # ใช้โดย watch mode ตอน dev
+  unrs-resolver: true # native resolver ของ ESLint
+  '@scarf/scarf': false # เก็บสถิติการใช้งานส่งกลับผู้พัฒนา — ไม่จำเป็นกับเรา
+
+minimumReleaseAgeExclude:
+  - zod@4.5.4
