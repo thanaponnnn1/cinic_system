@@ -3,6 +3,7 @@ import {
   formatBangkokDate,
   formatBangkokDateTime,
   formatBangkokTime,
+  formatThaiDate,
 } from './bangkok-time';
 
 describe('bangkok-time', () => {
@@ -65,5 +66,18 @@ describe('bangkok-time', () => {
       expect(formatBangkokDate(almost)).toBe('2026-09-01');
       expect(formatBangkokTime(almost)).toBe('23:59');
     });
+  });
+});
+
+describe('formatThaiDate', () => {
+  it('เขียนวันที่แบบที่ลูกค้าคนไทยอ่านแล้วเข้าใจทันที พร้อมปี พ.ศ.', () => {
+    expect(formatThaiDate(new Date('2026-09-02T03:30:00.000Z'))).toBe('พุธ 2 ก.ย. 2569');
+  });
+
+  it('นับวันตามเวลาไทย ไม่ใช่ UTC — นัดสี่ทุ่มของวันที่ 2 ต้องไม่กลายเป็นวันที่ 2 ตอนบ่าย', () => {
+    // 2026-09-02 22:00 น. ตามเวลาไทย = 15:00Z ของวันเดียวกัน
+    expect(formatThaiDate(new Date('2026-09-02T15:00:00.000Z'))).toBe('พุธ 2 ก.ย. 2569');
+    // 2026-09-03 00:30 น. ตามเวลาไทย = 17:30Z ของวันก่อนหน้า
+    expect(formatThaiDate(new Date('2026-09-02T17:30:00.000Z'))).toBe('พฤหัสบดี 3 ก.ย. 2569');
   });
 });

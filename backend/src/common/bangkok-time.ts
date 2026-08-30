@@ -49,3 +49,36 @@ export function formatBangkokDateTime(date: Date): string {
 function shifted(date: Date): Date {
   return new Date(date.getTime() + BANGKOK_OFFSET_MS);
 }
+
+/** ชื่อวันแบบไทยเต็ม เรียงตามค่าที่ Date.getUTCDay() คืน (0 = อาทิตย์) */
+const THAI_DAYS = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'] as const;
+
+/** ชื่อเดือนแบบย่อ เรียงตามค่าที่ Date.getUTCMonth() คืน (0 = มกราคม) */
+const THAI_MONTHS = [
+  'ม.ค.',
+  'ก.พ.',
+  'มี.ค.',
+  'เม.ย.',
+  'พ.ค.',
+  'มิ.ย.',
+  'ก.ค.',
+  'ส.ค.',
+  'ก.ย.',
+  'ต.ค.',
+  'พ.ย.',
+  'ธ.ค.',
+] as const;
+
+/**
+ * วันที่แบบที่ลูกค้าอ่านในแชท เช่น 'พุธ 2 ก.ย. 2569'
+ *
+ * ประกอบเองไม่ใช้ Intl เพราะ container ที่ deploy จริงมักไม่มีข้อมูล locale ไทยติดมาด้วย
+ * แล้วจะกลายเป็นภาษาอังกฤษเงียบ ๆ ตอนขึ้นคลาวด์ ซึ่งเป็นจุดที่ตรวจเจอยากที่สุด
+ */
+export function formatThaiDate(date: Date): string {
+  const local = shifted(date);
+  const day = THAI_DAYS[local.getUTCDay()];
+  const month = THAI_MONTHS[local.getUTCMonth()];
+
+  return `${day} ${local.getUTCDate()} ${month} ${local.getUTCFullYear() + 543}`;
+}

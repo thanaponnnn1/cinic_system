@@ -22,9 +22,11 @@ const envSchema = z.object({
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('7d'),
 
-  // ยังไม่บังคับใน Phase 0 — Phase 3 (LINE) จะเปลี่ยนเป็น required
+  // บังคับตั้งแต่ Phase 3 — ขาดค่าใดค่าหนึ่งแปลว่าเตือนนัดส่งไม่ออกหรือ webhook รับ event ไม่ได้
+  // ปล่อยว่างได้เฉพาะตอนรันเทสต์ ซึ่งไม่ได้ยิงหา LINE จริง (ดูเงื่อนไขท้ายไฟล์)
   LINE_CHANNEL_ACCESS_TOKEN: z.string().optional(),
   LINE_CHANNEL_SECRET: z.string().optional(),
+  /// userId ของแอดมินร้าน — ไม่มีก็รันได้ แค่ไม่มีใครได้รับข้อความแจ้งเตือนฝั่งร้าน
   LINE_ADMIN_USER_ID: z.string().optional(),
 
   DEMO_MODE: z
@@ -55,6 +57,26 @@ export function validateEnv(config: Record<string, unknown>): Env {
     console.warn(
       `[env] TZ ถูกตั้งเป็น "${env.TZ}" ไม่ใช่ Asia/Bangkok — งานตามเวลาจะเพี้ยนไปจากที่ร้านคาดหวัง`,
     );
+  }
+
+  // ระบบทั้งหมดตั้งแต่ Phase 3 วางอยู่บน LINE — ขาดค่าพวกนี้แล้วแอปขึ้นได้ตามปกติคือกับดัก
+  // เพราะจะไปเงียบตอนถึงเวลาส่งข้อความจริง ซึ่งกว่าจะรู้ก็คือลูกค้าไม่ได้รับการเตือนนัดไปแล้ว
+  if (env.NODE_ENV !== 'test') {
+    const missing = (
+      [
+        ['LINE_CHANNEL_ACCESS_TOKEN', env.LINE_CHANNEL_ACCESS_TOKEN],
+        ['LINE_CHANNEL_SECRET', env.LINE_CHANNEL_SECRET],
+      ] as const
+    )
+      .filter(([, value]) => !value)
+      .map(([key]) => key);
+
+    if (missing.length > 0) {
+      throw new Error(
+        `ต้องตั้งค่า ${missing.join(' และ ')} ตั้งแต่ Phase 3 เป็นต้นไป\n` +
+          'หาค่าได้ที่ LINE Developers Console → channel ของร้าน → Basic settings / Messaging API',
+      );
+    }
   }
 
   // ใช้ secret เดียวกันทั้งสองตัวจะทำให้ refresh token ถูกนำไปใช้แทน access token ได้

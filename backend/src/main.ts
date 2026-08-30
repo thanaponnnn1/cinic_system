@@ -9,7 +9,9 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { APP_VERSION } from './common/app-version';
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  // rawBody: true — webhook ของ LINE ต้องตรวจลายเซ็นจาก body ดิบตัวจริง
+  // ถ้าเอา object ที่ parse แล้วมา stringify ใหม่ ลายเซ็นจะไม่มีวันตรง
+  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
   const config = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
 

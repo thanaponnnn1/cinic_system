@@ -22,7 +22,8 @@ import type {
   FindAppointmentsQueryDto,
   RescheduleAppointmentDto,
 } from './dto/appointment-request.dto';
-import { ACTIVE_STATUSES, assertTransition } from './appointment-state-machine';
+import { ACTIVE_STATUSES, assertTransition, canTransition } from './appointment-state-machine';
+import type { LineActionResult } from './line-action.types';
 import { bangkokDayRange, formatBangkokDate, formatBangkokTime } from '../common/bangkok-time';
 import type { Prisma } from '../generated/prisma/client';
 
@@ -343,6 +344,71 @@ export class AppointmentsService {
     });
 
     return AppointmentResponseDto.from(appt, viewerRole);
+  }
+
+  // ── ปุ่มที่ลูกค้ากดเองในแชท LINE (Phase 3) ───────────────
+
+  /**
+   * ลูกค้ากด "ยืนยันนัด" ในแชท
+   *
+   * ต่างจากฝั่งพนักงานสามอย่าง: ตรวจว่าเป็นเจ้าของนัดจริง (appointmentId เดาได้),
+   * ไม่โยน error ออกไป (ปลายทางคือข้อความในแชท) และเขียนแบบมีเงื่อนไขสถานะเดิม
+   * เพื่อให้การกดพร้อมกันสองครั้งไม่กลายเป็นการเขียนทับกันเอง
+   */
+  confirmFromLine(appointmentId: string, lineUserId: string): Promise<LineActionResult> {
+    return this.changeStatusFromLine(appointmentId, lineUserId, ApptStatus.CONFIRMED);
+  }
+
+  /**
+   * ลูกค้ากด "ขอเลื่อนนัด" ในแชท
+   *
+   * MVP ไม่ให้ลูกค้าเลือกเวลาใหม่เอง — แค่ตั้งธงให้พนักงานเห็นว่าต้องโทรกลับ
+   * (เหตุผลอยู่ใน docs/plan-clinic-demo.md ข้อ 3.1)
+   */
+  requestRescheduleFromLine(appointmentId: string, lineUserId: string): Promise<LineActionResult> {
+    return this.changeStatusFromLine(appointmentId, lineUserId, ApptStatus.RESCHEDULE_REQUESTED);
+  }
+
+  private async changeStatusFromLine(
+    appointmentId: string,
+    lineUserId: string,
+    to: ApptStatus,
+  ): Promise<LineActionResult> {
+    const appt = await this.prisma.appointment.findUnique({
+      where: { id: appointmentId },
+      include: {
+        customer: { select: { id: true, name: true, lineUserId: true } },
+        provider: { select: { name: true } },
+        service: { select: { name: true } },
+      },
+    });
+
+    if (!appt) return { status: 'not_found' };
+    if (appt.customer.lineUserId !== lineUserId) return { status: 'forbidden' };
+
+    const current = appt.status as ApptStatus;
+
+    if (current === to) return { status: 'unchanged', current };
+    if (!canTransition(current, to)) return { status: 'invalid', current };
+
+    // เงื่อนไข status ใน where คือตัวกันการกดสองครั้งพร้อมกัน — คนที่มาทีหลังจะได้ count = 0
+    const { count } = await this.prisma.appointment.updateMany({
+      where: { id: appointmentId, status: current },
+      data: { status: to },
+    });
+
+    if (count === 0) return { status: 'unchanged', current };
+
+    return {
+      status: 'ok',
+      appointment: {
+        id: appt.id,
+        startsAt: appt.startsAt,
+        providerName: appt.provider.name,
+        serviceName: appt.service.name,
+        customerId: appt.customer.id,
+      },
+    };
   }
 
   // ── ตัวช่วยภายใน ────────────────────────────────────────

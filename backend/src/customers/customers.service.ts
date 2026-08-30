@@ -10,6 +10,10 @@ import type {
   UpdateCustomerDto,
 } from './dto/customer-request.dto';
 import type { Prisma } from '../generated/prisma/client';
+import { generateLinkCode } from '../line/link-code';
+
+/** จำนวนครั้งที่ยอมสุ่มรหัสใหม่เมื่อไปชนรหัสที่มีคนถืออยู่ */
+const MAX_LINK_CODE_ATTEMPTS = 5;
 
 @Injectable()
 export class CustomersService {
@@ -152,6 +156,34 @@ export class CustomersService {
       data: { isActive: true },
     });
     return CustomerResponseDto.from(customer, viewerRole);
+  }
+
+  /**
+   * ออกรหัสเชื่อมบัญชี LINE ให้ลูกค้ารายนี้
+   *
+   * พนักงานกดปุ่มนี้แล้วอ่านรหัสให้ลูกค้าฟังหน้าร้าน ลูกค้าพิมพ์ในแชท LINE OA
+   * แล้วระบบผูก lineUserId ให้ (ดู LineWebhookService) — รหัสหนึ่งใบใช้ได้ครั้งเดียว
+   *
+   * ออกรหัสใหม่ทับของเดิมได้เสมอ เพราะลูกค้าเปลี่ยนเครื่องหรือทำรหัสหายเป็นเรื่องปกติหน้าร้าน
+   */
+  async issueLinkCode(id: string): Promise<{ linkCode: string }> {
+    await this.ensureExists(id);
+
+    // รหัสมี 900,000 ค่า โอกาสชนต่ำมาก แต่ถ้าชนแล้วปล่อยผ่านจะกลายเป็นผูกผิดคน จึงต้องสุ่มใหม่
+    for (let attempt = 0; attempt < MAX_LINK_CODE_ATTEMPTS; attempt += 1) {
+      const linkCode = generateLinkCode();
+      const taken = await this.prisma.customer.findFirst({
+        where: { linkCode },
+        select: { id: true },
+      });
+
+      if (taken && taken.id !== id) continue;
+
+      await this.prisma.customer.update({ where: { id }, data: { linkCode } });
+      return { linkCode };
+    }
+
+    throw new ConflictException('สร้างรหัสเชื่อมบัญชีไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
   }
 
   private async ensureExists(id: string) {

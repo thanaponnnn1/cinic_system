@@ -109,4 +109,17 @@ export class CustomersController {
   ): Promise<CustomerResponseDto> {
     return this.customers.reactivate(id, user.role);
   }
+
+  @Post(':id/link-code')
+  @Roles(Role.ADMIN, Role.STAFF)
+  @ApiOperation({
+    summary: 'ออกรหัสเชื่อมบัญชี LINE',
+    description:
+      'คืนรหัส 6 หลักให้พนักงานอ่านให้ลูกค้าฟัง ลูกค้าพิมพ์รหัสนี้ในแชท LINE OA ของร้าน ' +
+      'ระบบจะผูกบัญชี LINE เข้ากับลูกค้ารายนี้ให้ทันที รหัสใช้ได้ครั้งเดียว',
+  })
+  @ApiResponse({ status: 404, description: 'ไม่พบลูกค้ารายนี้' })
+  issueLinkCode(@Param('id') id: string): Promise<{ linkCode: string }> {
+    return this.customers.issueLinkCode(id);
+  }
 }

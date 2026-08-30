@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@clinicq/shared": "workspace:*",
+    "@line/bot-sdk": "^11.2.0",
     "@nestjs/common": "^11.2.3",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.2.3",

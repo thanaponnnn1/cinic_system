@@ -24,6 +24,7 @@ describe('CustomersService', () => {
 
   const db = {
     findUnique: jest.fn(),
+    findFirst: jest.fn(),
     findMany: jest.fn(),
     count: jest.fn(),
     create: jest.fn(),
@@ -152,6 +153,43 @@ describe('CustomersService', () => {
       db.findUnique.mockResolvedValue(null);
 
       await expect(service.deactivate('ไม่มีจริง')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('ออกรหัสเชื่อมบัญชี LINE', () => {
+    it('บันทึกรหัส 6 หลักลงกับลูกค้ารายนั้น เพื่อให้พนักงานอ่านให้ลูกค้าฟังได้', async () => {
+      db.findUnique.mockResolvedValue(customer);
+      db.findFirst.mockResolvedValue(null);
+      db.update.mockResolvedValue({ ...customer, linkCode: '482913' });
+
+      const result = await service.issueLinkCode('cus_1');
+
+      expect(result.linkCode).toMatch(/^[1-9]\d{5}$/);
+      expect(db.update).toHaveBeenCalledWith({
+        where: { id: 'cus_1' },
+        data: { linkCode: result.linkCode },
+      });
+    });
+
+    it('เลี่ยงรหัสที่มีลูกค้าคนอื่นถืออยู่ ไม่งั้นพิมพ์รหัสแล้วผูกผิดคน', async () => {
+      db.findUnique.mockResolvedValue(customer);
+      db.findFirst.mockResolvedValueOnce({ id: 'cus_other' }).mockResolvedValueOnce(null);
+      db.update.mockResolvedValue(customer);
+
+      const result = await service.issueLinkCode('cus_1');
+
+      expect(db.findFirst).toHaveBeenCalledTimes(2);
+      expect(db.update).toHaveBeenCalledWith({
+        where: { id: 'cus_1' },
+        data: { linkCode: result.linkCode },
+      });
+    });
+
+    it('แจ้งชัดเจนเมื่อไม่พบลูกค้า', async () => {
+      db.findUnique.mockResolvedValue(null);
+
+      await expect(service.issueLinkCode('ไม่มีจริง')).rejects.toThrow(NotFoundException);
+      expect(db.update).not.toHaveBeenCalled();
     });
   });
 });

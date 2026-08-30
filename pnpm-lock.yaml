@@ -41,6 +41,9 @@ importers:
       '@clinicq/shared':
         specifier: workspace:*
         version: link:../shared
+      '@line/bot-sdk':
+        specifier: ^11.2.0
+        version: 11.2.0
       '@nestjs/common':
         specifier: ^11.2.3
         version: 11.2.3(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1)
@@ -894,6 +897,10 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
+
+  '@line/bot-sdk@11.2.0':
+    resolution: {integrity: sha512-JKYFa3jaPYWqgI4hnc0ls+7tMmUEgnFF0Jb48kscKcGOO8qh4hddJyiq8/TFqaTWWxXQeSgYd1o5zrHjt6FrpQ==}
+    engines: {node: '>=22'}
 
   '@lukeed/csprng@1.1.0':
     resolution: {integrity: sha512-Z7C/xXCiGWsg0KuKsHTKJxbWhpI3Vs5GwLfOean7MGyVFGqdRgBbAjOCh6u4bbjPc/8MJ2pZmK/0DLdCbivLDA==}
@@ -5125,6 +5132,10 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
+
+  '@line/bot-sdk@11.2.0':
+    dependencies:
+      '@types/node': 24.13.3
 
   '@lukeed/csprng@1.1.0': {}
 
