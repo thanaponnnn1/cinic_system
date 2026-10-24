@@ -11,6 +11,16 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001',
   },
+
+  // หน้าแอปจองของลูกค้าห้ามขึ้น Google — metadata ใน layout ครอบแค่ HTML ส่วนนี้ครอบ API ด้วย
+  async headers() {
+    const noindex = [{ key: 'X-Robots-Tag', value: 'noindex' }];
+    return [
+      { source: '/c', headers: noindex },
+      { source: '/c/:path*', headers: noindex },
+      { source: '/api/customer/:path*', headers: noindex },
+    ];
+  },
 };
 
 export default nextConfig;

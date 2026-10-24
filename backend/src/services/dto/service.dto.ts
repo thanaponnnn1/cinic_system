@@ -13,6 +13,7 @@ import {
 } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto';
 import { IsImageUrl } from '../../common/dto/image-url.decorator';
+import { IsSlug } from '../../common/dto/slug.decorator';
 
 export class CreateServiceDto {
   @ApiProperty({
@@ -44,6 +45,13 @@ export class CreateServiceDto {
   })
   @IsImageUrl()
   imageUrl?: string;
+
+  @ApiPropertyOptional({
+    example: 'facial-treatment',
+    description: 'ชื่อในลิงก์จากเว็บร้าน /c/book?service=<slug> ห้ามซ้ำกับบริการอื่น',
+  })
+  @IsSlug()
+  slug?: string;
 }
 
 export class UpdateServiceDto extends PartialType(CreateServiceDto) {}
@@ -72,6 +80,9 @@ export class ServiceResponseDto {
   @ApiPropertyOptional()
   imageUrl: string | null;
 
+  @ApiPropertyOptional()
+  slug: string | null;
+
   @ApiProperty()
   isActive: boolean;
 
@@ -82,6 +93,7 @@ export class ServiceResponseDto {
     // Prisma คืน Decimal มาเป็นออบเจ็กต์ ไม่ใช่ number จึงต้องแปลงก่อนส่งออก
     price: { toString(): string };
     imageUrl: string | null;
+    slug: string | null;
     isActive: boolean;
   }): ServiceResponseDto {
     return {
@@ -90,6 +102,7 @@ export class ServiceResponseDto {
       durationMin: entity.durationMin,
       price: Number(entity.price.toString()),
       imageUrl: entity.imageUrl,
+      slug: entity.slug,
       isActive: entity.isActive,
     };
   }

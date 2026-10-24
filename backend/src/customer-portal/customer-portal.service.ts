@@ -88,12 +88,19 @@ export class CustomerPortalService {
       this.prisma.service.findMany({
         where: { isActive: true },
         orderBy: { name: 'asc' },
-        select: { id: true, name: true, durationMin: true, price: true, imageUrl: true },
+        select: {
+          id: true,
+          name: true,
+          durationMin: true,
+          price: true,
+          imageUrl: true,
+          slug: true,
+        },
       }),
       this.prisma.provider.findMany({
         where: { isActive: true },
         orderBy: { name: 'asc' },
-        select: { id: true, name: true, title: true, photoUrl: true },
+        select: { id: true, name: true, title: true, photoUrl: true, slug: true },
       }),
     ]);
 

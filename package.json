@@ -24,6 +24,10 @@
     "db:format": "pnpm --filter @clinicq/backend db:format",
     "db:seed": "pnpm --filter @clinicq/backend db:seed",
     "demo:reset": "pnpm --filter @clinicq/backend demo:reset",
+    "site:build": "pnpm --filter @clinicq/site build",
+    "site:start": "pnpm --filter @clinicq/site start",
+    "site:test": "pnpm --filter @clinicq/site test",
+    "site:images": "pnpm --filter @clinicq/site images",
     "prepare": "husky"
   },
   "devDependencies": {

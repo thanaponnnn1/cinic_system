@@ -10,9 +10,11 @@ import {
   BOOKING_STEPS,
   bookingReducer,
   initialDraft,
+  resolvePreset,
   usableCourses,
   type BookingDraft,
   type BookingEvent,
+  type BookingPreset,
 } from '@/lib/booking';
 import { CUSTOMER_KEYS, customerGet, customerPost } from '@/lib/customer-api';
 import { customerErrorMessage, hasErrorCode } from '@/lib/customer-errors';
@@ -41,13 +43,13 @@ import {
 import { StepPath } from './step-path';
 import { TimeStep } from './time-step';
 
-interface Preset {
-  serviceId: string | null;
-  providerId: string | null;
-  courseId: string | null;
-}
-
-export function BookingFlow({ preset, customer }: { preset: Preset; customer: CustomerProfile }) {
+export function BookingFlow({
+  preset,
+  customer,
+}: {
+  preset: BookingPreset;
+  customer: CustomerProfile;
+}) {
   const shop = useQuery({
     queryKey: CUSTOMER_KEYS.shop,
     queryFn: () => customerGet<CustomerShop>('shop'),
@@ -81,25 +83,6 @@ export function BookingFlow({ preset, customer }: { preset: Preset; customer: Cu
   );
 }
 
-/**
- * ตัดของที่เลือกมาทาง URL ที่ไม่มีอยู่จริงทิ้ง (บริการที่ร้านปิดไปแล้ว คอร์สที่ใช้ไม่ได้)
- * คอร์สที่ผูกบริการไว้เลือกบริการนั้นให้เลย ลูกค้ากด "จองโดยใช้คอร์สนี้" แล้วไม่ต้องหาบริการเอง
- */
-function sanitizePreset(preset: Preset, shop: CustomerShop, courses: CustomerCourseView[]) {
-  const course = courses.find((c) => c.id === preset.courseId) ?? null;
-  const serviceId = preset.serviceId ?? course?.serviceId ?? null;
-  const service = shop.services.find((s) => s.id === serviceId) ?? null;
-  const provider = shop.providers.find((p) => p.id === preset.providerId) ?? null;
-  const courseUsable =
-    course !== null && service !== null && usableCourses([course], service.id).length > 0;
-
-  return {
-    serviceId: service?.id ?? null,
-    providerId: provider?.id ?? null,
-    courseId: courseUsable ? course.id : null,
-  };
-}
-
 function Booking({
   shop,
   courses,
@@ -108,13 +91,13 @@ function Booking({
 }: {
   shop: CustomerShop;
   courses: CustomerCourseView[];
-  preset: Preset;
+  preset: BookingPreset;
   customer: CustomerProfile;
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [draft, dispatch] = useReducer(bookingReducer, null, () =>
-    initialDraft(sanitizePreset(preset, shop, courses), formatBangkokDate(new Date())),
+    initialDraft(resolvePreset(preset, shop, courses), formatBangkokDate(new Date())),
   );
   const [slotNotice, setSlotNotice] = useState<string | null>(null);
 

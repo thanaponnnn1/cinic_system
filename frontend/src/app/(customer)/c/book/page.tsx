@@ -8,6 +8,7 @@ import { CustomerGate } from '@/components/customer/session';
 /**
  * จองคิว 4 ขั้น — รับของที่เลือกมาจากหน้าอื่นทาง query (?service= ?provider= ?course=)
  * เช่น แตะการ์ดบริการในหน้าร้าน หรือปุ่ม "จองกับช่างคนนี้" แล้วข้ามขั้นที่เลือกแล้วไปเลย
+ * ?service= กับ ?provider= เป็นได้ทั้ง id (ลิงก์ในแอป) และ slug (ลิงก์จากเว็บร้าน)
  */
 export default function BookPage() {
   return (
@@ -20,9 +21,9 @@ export default function BookPage() {
 function BookWithPreset() {
   const params = useSearchParams();
   const preset = {
-    serviceId: params.get('service'),
-    providerId: params.get('provider'),
-    courseId: params.get('course'),
+    service: params.get('service'),
+    provider: params.get('provider'),
+    course: params.get('course'),
   };
 
   return (

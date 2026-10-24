@@ -39,8 +39,16 @@ export interface CustomerShop {
     durationMin: number;
     price: number;
     imageUrl: string | null;
+    /** ชื่อในลิงก์จากเว็บร้าน หน้าจองรับ ?service= เป็น slug หรือ id ก็ได้ */
+    slug: string | null;
   }[];
-  providers: { id: string; name: string; title: string | null; photoUrl: string | null }[];
+  providers: {
+    id: string;
+    name: string;
+    title: string | null;
+    photoUrl: string | null;
+    slug: string | null;
+  }[];
 }
 
 /** นัดในมุมลูกค้า — ปุ่มที่กดได้คำนวณมาให้แล้ว หน้าเว็บไม่ต้องรู้กฎการเปลี่ยนสถานะ */

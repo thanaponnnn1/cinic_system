@@ -45,46 +45,70 @@ const USERS = [
 
 /**
  * รูปช่างและรูปบริการชี้ไปที่ frontend/public/demo/ (Phase 10 หน้าร้านฝั่งลูกค้า)
+ * slug ต้องตรงกับ site/content/services.ts และ team.ts ปุ่มจองในเว็บร้านลิงก์มาด้วยค่านี้
  *
  * แถวที่มีอยู่แล้วถูกอัปเดตทับด้วยค่าชุดนี้ทุกครั้งที่รัน seed ฐานข้อมูลที่ seed ไว้ก่อน
  * มีคอลัมน์รูปจึงได้รูปครบโดยไม่ต้องล้างข้อมูลทิ้ง
  */
 const PROVIDERS = [
-  { name: 'คุณแนน', title: 'ช่างผู้เชี่ยวชาญ', photoUrl: '/demo/staff-nan.webp' },
-  { name: 'คุณเบส', title: 'ช่างอาวุโส', photoUrl: '/demo/staff-best.webp' },
-  { name: 'คุณฟ้า', title: 'ช่าง', photoUrl: '/demo/staff-fah.webp' },
+  { name: 'คุณแนน', slug: 'nan', title: 'ช่างผู้เชี่ยวชาญ', photoUrl: '/demo/staff-nan.webp' },
+  { name: 'คุณเบส', slug: 'best', title: 'ช่างอาวุโส', photoUrl: '/demo/staff-best.webp' },
+  { name: 'คุณฟ้า', slug: 'fah', title: 'ช่าง', photoUrl: '/demo/staff-fah.webp' },
 ];
 
 const SERVICES = [
   {
     name: 'ทรีตเมนต์บำรุงผิวหน้า',
+    slug: 'facial-treatment',
     durationMin: 60,
     price: 1500,
     imageUrl: '/demo/svc-facial-treatment.webp',
   },
   {
     name: 'ทำความสะอาดผิวหน้า',
+    slug: 'facial-cleansing',
     durationMin: 45,
     price: 900,
     imageUrl: '/demo/svc-facial-cleansing.webp',
   },
   {
     name: 'นวดหน้าผ่อนคลาย',
+    slug: 'face-massage',
     durationMin: 30,
     price: 600,
     imageUrl: '/demo/svc-face-massage.webp',
   },
-  { name: 'ดูแลผิวรอบดวงตา', durationMin: 30, price: 800, imageUrl: '/demo/svc-eye-care.webp' },
+  {
+    name: 'ดูแลผิวรอบดวงตา',
+    slug: 'eye-care',
+    durationMin: 30,
+    price: 800,
+    imageUrl: '/demo/svc-eye-care.webp',
+  },
   {
     name: 'ทรีตเมนต์บำรุงผม',
+    slug: 'hair-treatment',
     durationMin: 90,
     price: 2200,
     imageUrl: '/demo/svc-hair-treatment.webp',
   },
-  { name: 'สระไดร์', durationMin: 45, price: 450, imageUrl: '/demo/svc-wash-blowdry.webp' },
-  { name: 'ตัดแต่งทรงผม', durationMin: 60, price: 800, imageUrl: '/demo/svc-haircut.webp' },
+  {
+    name: 'สระไดร์',
+    slug: 'wash-blowdry',
+    durationMin: 45,
+    price: 450,
+    imageUrl: '/demo/svc-wash-blowdry.webp',
+  },
+  {
+    name: 'ตัดแต่งทรงผม',
+    slug: 'haircut',
+    durationMin: 60,
+    price: 800,
+    imageUrl: '/demo/svc-haircut.webp',
+  },
   {
     name: 'ปรึกษาและวางแผนการดูแล',
+    slug: 'consult',
     durationMin: 30,
     price: 0,
     imageUrl: '/demo/svc-consult.webp',

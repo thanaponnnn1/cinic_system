@@ -3,6 +3,7 @@ import { Transform } from 'class-transformer';
 import { IsBoolean, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto';
 import { IsImageUrl } from '../../common/dto/image-url.decorator';
+import { IsSlug } from '../../common/dto/slug.decorator';
 
 export class CreateProviderDto {
   @ApiProperty({ example: 'คุณแนน' })
@@ -24,6 +25,13 @@ export class CreateProviderDto {
   })
   @IsImageUrl()
   photoUrl?: string;
+
+  @ApiPropertyOptional({
+    example: 'nan',
+    description: 'ชื่อในลิงก์จากเว็บร้าน /c/book?provider=<slug> ห้ามซ้ำกับช่างคนอื่น',
+  })
+  @IsSlug()
+  slug?: string;
 }
 
 export class UpdateProviderDto extends PartialType(CreateProviderDto) {}
@@ -49,6 +57,9 @@ export class ProviderResponseDto {
   @ApiPropertyOptional()
   photoUrl: string | null;
 
+  @ApiPropertyOptional()
+  slug: string | null;
+
   @ApiProperty()
   isActive: boolean;
 
@@ -57,6 +68,7 @@ export class ProviderResponseDto {
     name: string;
     title: string | null;
     photoUrl: string | null;
+    slug: string | null;
     isActive: boolean;
   }): ProviderResponseDto {
     return {
@@ -64,6 +76,7 @@ export class ProviderResponseDto {
       name: entity.name,
       title: entity.title,
       photoUrl: entity.photoUrl,
+      slug: entity.slug,
       isActive: entity.isActive,
     };
   }

@@ -164,6 +164,8 @@ model Provider {
   title     String?
   /// รูปช่างที่หน้าร้านฝั่งลูกค้าแสดง — path ใต้ frontend/public หรือ URL https เต็ม
   photoUrl  String?
+  /// ชื่อในลิงก์จากเว็บร้าน เช่น /c/book?provider=nan — id เปลี่ยนทุกครั้งที่สร้างฐานข้อมูลใหม่ ลิงก์จึงอ้าง id ไม่ได้
+  slug      String?  @unique
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -181,6 +183,8 @@ model Service {
   price       Decimal  @db.Decimal(10, 2)
   /// รูปบริการที่หน้าร้านฝั่งลูกค้าแสดง — อยู่ใน DB ให้เจ้าของร้านเปลี่ยนเองได้ ไม่ฝังในโค้ดหน้าเว็บ
   imageUrl    String?
+  /// ชื่อในลิงก์จากเว็บร้าน เช่น /c/book?service=haircut — เหตุผลเดียวกับ Provider.slug
+  slug        String?  @unique
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

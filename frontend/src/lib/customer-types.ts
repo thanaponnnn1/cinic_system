@@ -41,6 +41,7 @@ export interface ShopService {
   durationMin: number;
   price: number;
   imageUrl: string | null;
+  slug: string | null;
 }
 
 export interface ShopProvider {
@@ -48,6 +49,7 @@ export interface ShopProvider {
   name: string;
   title: string | null;
   photoUrl: string | null;
+  slug: string | null;
 }
 
 export interface CustomerShop {

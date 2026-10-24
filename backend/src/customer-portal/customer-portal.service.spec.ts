@@ -44,7 +44,7 @@ describe('CustomerPortalService', () => {
   let takenBy: Set<string>;
 
   const db = {
-    service: { findUnique: jest.fn() },
+    service: { findUnique: jest.fn(), findMany: jest.fn() },
     provider: { findUnique: jest.fn(), findMany: jest.fn() },
     customer: { findUnique: jest.fn() },
     customerCourse: { findUnique: jest.fn(), findMany: jest.fn() },
@@ -71,6 +71,7 @@ describe('CustomerPortalService', () => {
       ...Object.values(db.provider),
       ...Object.values(db.customerCourse),
       db.service.findUnique,
+      db.service.findMany,
       db.customer.findUnique,
       db.$executeRaw,
       db.$transaction,
@@ -141,6 +142,52 @@ describe('CustomerPortalService', () => {
     (db.appointment.create.mock.calls as [{ data: Record<string, unknown> }][]).map(
       ([arg]) => arg.data,
     );
+
+  describe('หน้าร้าน', () => {
+    /** แถวเต็มในตาราง — mock คืนเฉพาะคอลัมน์ที่ select ขอเหมือน Prisma จริง ลืม select คอลัมน์ไหนเทสต์จะเห็น */
+    const SERVICE_ROWS = [
+      { ...FACIAL, slug: 'facial-treatment', imageUrl: '/demo/svc-facial-treatment.webp' },
+      { ...FACIAL, id: 'svc_new', name: 'บริการใหม่', slug: null, imageUrl: null },
+    ];
+    const PROVIDER_ROWS = [
+      { ...PROVIDERS.prov_best, title: 'ช่างอาวุโส', photoUrl: null, slug: 'best', phone: 'x' },
+    ];
+    const selected =
+      (rows: Record<string, unknown>[]) =>
+      ({ select }: { select: Record<string, boolean> }) =>
+        Promise.resolve(
+          rows.map((row) => Object.fromEntries(Object.keys(select).map((k) => [k, row[k]]))),
+        );
+
+    it('ส่ง slug ของบริการและช่างออกไป เว็บร้านลิงก์มาที่หน้าจองด้วยค่านี้', async () => {
+      db.service.findMany.mockImplementation(selected(SERVICE_ROWS));
+      db.provider.findMany.mockImplementation(selected(PROVIDER_ROWS));
+
+      const shop = await portal.shop();
+
+      expect(shop.services).toEqual([
+        {
+          id: 'svc_facial',
+          name: 'ทรีตเมนต์บำรุงผิวหน้า',
+          durationMin: 60,
+          price: 1500,
+          imageUrl: '/demo/svc-facial-treatment.webp',
+          slug: 'facial-treatment',
+        },
+        {
+          id: 'svc_new',
+          name: 'บริการใหม่',
+          durationMin: 60,
+          price: 1500,
+          imageUrl: null,
+          slug: null,
+        },
+      ]);
+      expect(shop.providers).toEqual([
+        { id: 'prov_best', name: 'คุณเบส', title: 'ช่างอาวุโส', photoUrl: null, slug: 'best' },
+      ]);
+    });
+  });
 
   describe('จองคิว', () => {
     it('ไม่ระบุช่างแล้วช่างคนแรกติดคิว ระบบไปจองกับช่างคนถัดไปให้', async () => {

@@ -84,6 +84,18 @@ describe('API ลูกค้า — ขอบของ endpoint หน้าร
     expect(portal.shop).toHaveBeenCalled();
   });
 
+  it('หน้าร้านส่ง slug ของบริการและช่างผ่านออกไปครบ', async () => {
+    portal.shop.mockResolvedValue({
+      services: [{ id: 'svc_1', name: 'นวดหน้าผ่อนคลาย', slug: 'face-massage' }],
+      providers: [{ id: 'prov_1', name: 'คุณเบส', slug: 'best' }],
+    });
+
+    const res = await request(app.getHttpServer()).get('/api/customer/shop').expect(200);
+
+    expect(res.body.services[0].slug).toBe('face-massage');
+    expect(res.body.providers[0].slug).toBe('best');
+  });
+
   it.each([
     ['get', '/api/customer/availability?serviceId=svc_1&date=2026-10-25'],
     ['get', '/api/customer/appointments'],

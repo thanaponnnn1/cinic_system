@@ -1,0 +1,254 @@
+{
+  "hero-lounge": {
+    "src": "/images/hero-lounge.webp",
+    "width": 1472,
+    "height": 2208,
+    "sourceWidth": 736,
+    "bytes": 169954
+  },
+  "lounge-arch-niche": {
+    "src": "/images/lounge-arch-niche.webp",
+    "width": 1000,
+    "height": 1200,
+    "sourceWidth": 500,
+    "bytes": 70722
+  },
+  "lounge-candle-table": {
+    "src": "/images/lounge-candle-table.webp",
+    "width": 1472,
+    "height": 1088,
+    "sourceWidth": 736,
+    "bytes": 77040
+  },
+  "space-counter": {
+    "src": "/images/space-counter.webp",
+    "width": 1472,
+    "height": 1528,
+    "sourceWidth": 736,
+    "bytes": 136926
+  },
+  "space-treatment-room": {
+    "src": "/images/space-treatment-room.webp",
+    "width": 1472,
+    "height": 2194,
+    "sourceWidth": 736,
+    "bytes": 81192
+  },
+  "treatment-room-vanity": {
+    "src": "/images/treatment-room-vanity.webp",
+    "width": 1472,
+    "height": 1080,
+    "sourceWidth": 736,
+    "bytes": 48284
+  },
+  "treatment-room-bed": {
+    "src": "/images/treatment-room-bed.webp",
+    "width": 1352,
+    "height": 1074,
+    "sourceWidth": 676,
+    "bytes": 40966
+  },
+  "space-twin-room": {
+    "src": "/images/space-twin-room.webp",
+    "width": 1360,
+    "height": 1360,
+    "sourceWidth": 680,
+    "bytes": 46828
+  },
+  "twin-room-candles": {
+    "src": "/images/twin-room-candles.webp",
+    "width": 1000,
+    "height": 1000,
+    "sourceWidth": 500,
+    "bytes": 32638
+  },
+  "space-pedicure-lounge": {
+    "src": "/images/space-pedicure-lounge.webp",
+    "width": 1340,
+    "height": 1000,
+    "sourceWidth": 670,
+    "bytes": 118596
+  },
+  "space-hair-studio": {
+    "src": "/images/space-hair-studio.webp",
+    "width": 1472,
+    "height": 1472,
+    "sourceWidth": 736,
+    "bytes": 129248
+  },
+  "hair-studio-chair": {
+    "src": "/images/hair-studio-chair.webp",
+    "width": 1000,
+    "height": 1000,
+    "sourceWidth": 500,
+    "bytes": 64674
+  },
+  "hair-studio-bed": {
+    "src": "/images/hair-studio-bed.webp",
+    "width": 1000,
+    "height": 1000,
+    "sourceWidth": 500,
+    "bytes": 74146
+  },
+  "facial-treatment": {
+    "src": "/images/facial-treatment.webp",
+    "width": 1472,
+    "height": 2068,
+    "sourceWidth": 736,
+    "bytes": 113044
+  },
+  "facial-treatment-therapist": {
+    "src": "/images/facial-treatment-therapist.webp",
+    "width": 1072,
+    "height": 1160,
+    "sourceWidth": 536,
+    "bytes": 60072
+  },
+  "facial-treatment-tray": {
+    "src": "/images/facial-treatment-tray.webp",
+    "width": 1472,
+    "height": 1008,
+    "sourceWidth": 736,
+    "bytes": 61232
+  },
+  "facial-cleansing": {
+    "src": "/images/facial-cleansing.webp",
+    "width": 1632,
+    "height": 2912,
+    "sourceWidth": 816,
+    "bytes": 116632
+  },
+  "facial-cleansing-therapist": {
+    "src": "/images/facial-cleansing-therapist.webp",
+    "width": 1400,
+    "height": 1400,
+    "sourceWidth": 700,
+    "bytes": 39570
+  },
+  "facial-cleansing-hands": {
+    "src": "/images/facial-cleansing-hands.webp",
+    "width": 1400,
+    "height": 1112,
+    "sourceWidth": 700,
+    "bytes": 60886
+  },
+  "face-massage": {
+    "src": "/images/face-massage.webp",
+    "width": 800,
+    "height": 1114,
+    "sourceWidth": 400,
+    "bytes": 59150
+  },
+  "eye-care": {
+    "src": "/images/eye-care.webp",
+    "width": 1472,
+    "height": 2576,
+    "sourceWidth": 736,
+    "bytes": 93608
+  },
+  "eye-care-mask": {
+    "src": "/images/eye-care-mask.webp",
+    "width": 1472,
+    "height": 1080,
+    "sourceWidth": 736,
+    "bytes": 45032
+  },
+  "eye-care-tray": {
+    "src": "/images/eye-care-tray.webp",
+    "width": 1472,
+    "height": 1056,
+    "sourceWidth": 736,
+    "bytes": 48960
+  },
+  "hair-treatment": {
+    "src": "/images/hair-treatment.webp",
+    "width": 2160,
+    "height": 3840,
+    "sourceWidth": 1080,
+    "bytes": 211434
+  },
+  "hair-treatment-wash": {
+    "src": "/images/hair-treatment-wash.webp",
+    "width": 2160,
+    "height": 1900,
+    "sourceWidth": 1080,
+    "bytes": 126510
+  },
+  "wash-blowdry": {
+    "src": "/images/wash-blowdry.webp",
+    "width": 1472,
+    "height": 1962,
+    "sourceWidth": 736,
+    "bytes": 118924
+  },
+  "haircut": {
+    "src": "/images/haircut.webp",
+    "width": 2048,
+    "height": 3072,
+    "sourceWidth": 1024,
+    "bytes": 183974
+  },
+  "haircut-scissors": {
+    "src": "/images/haircut-scissors.webp",
+    "width": 2048,
+    "height": 1200,
+    "sourceWidth": 1024,
+    "bytes": 92922
+  },
+  "haircut-client": {
+    "src": "/images/haircut-client.webp",
+    "width": 2048,
+    "height": 1472,
+    "sourceWidth": 1024,
+    "bytes": 89258
+  },
+  "hair-styling": {
+    "src": "/images/hair-styling.webp",
+    "width": 1472,
+    "height": 2208,
+    "sourceWidth": 736,
+    "bytes": 131916
+  },
+  "styling-shelves": {
+    "src": "/images/styling-shelves.webp",
+    "width": 1000,
+    "height": 1400,
+    "sourceWidth": 500,
+    "bytes": 65276
+  },
+  "staff-nan": {
+    "src": "/images/staff-nan.webp",
+    "width": 1472,
+    "height": 1962,
+    "sourceWidth": 736,
+    "bytes": 104322
+  },
+  "staff-best": {
+    "src": "/images/staff-best.webp",
+    "width": 800,
+    "height": 800,
+    "sourceWidth": 400,
+    "bytes": 28482
+  },
+  "staff-fah": {
+    "src": "/images/staff-fah.webp",
+    "width": 872,
+    "height": 872,
+    "sourceWidth": 436,
+    "bytes": 37126
+  },
+  "review-portrait-1": {
+    "src": "/images/review-portrait-1.webp",
+    "width": 1230,
+    "height": 1230,
+    "sourceWidth": 615,
+    "bytes": 78530
+  },
+  "review-portrait-2": {
+    "src": "/images/review-portrait-2.webp",
+    "width": 900,
+    "height": 900,
+    "sourceWidth": 450,
+    "bytes": 41226
+  }
+}

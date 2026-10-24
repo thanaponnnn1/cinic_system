@@ -6,6 +6,8 @@ import { SPLASH_SEEN_KEY } from '@/components/customer/splash-key';
 export const metadata: Metadata = {
   title: `${BRAND_INFO.name} — จองคิวออนไลน์`,
   description: `จองคิว ดูนัด และดูคอร์สคงเหลือของ ${BRAND_INFO.name}`,
+  // หน้าแอปจองไม่ควรไปแย่งอันดับกับหน้าบริการของเว็บร้าน next.config.ts ใส่ X-Robots-Tag ซ้ำไว้อีกชั้น
+  robots: { index: false, follow: false },
 };
 
 export const viewport: Viewport = {

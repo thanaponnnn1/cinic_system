@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import type { PaginatedResponse } from '@clinicq/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { paginate } from '../common/dto/pagination.dto';
+import { rethrowSlugTaken } from '../common/prisma-errors';
 import {
   ServiceResponseDto,
   type CreateServiceDto,
@@ -36,13 +37,17 @@ export class ServicesService {
   }
 
   async create(dto: CreateServiceDto): Promise<ServiceResponseDto> {
-    const service = await this.prisma.service.create({ data: dto });
+    const service = await this.prisma.service
+      .create({ data: dto })
+      .catch((error: unknown) => rethrowSlugTaken(error, dto.slug, 'บริการ'));
     return ServiceResponseDto.from(service);
   }
 
   async update(id: string, dto: UpdateServiceDto): Promise<ServiceResponseDto> {
     await this.ensureExists(id);
-    const service = await this.prisma.service.update({ where: { id }, data: dto });
+    const service = await this.prisma.service
+      .update({ where: { id }, data: dto })
+      .catch((error: unknown) => rethrowSlugTaken(error, dto.slug, 'บริการ'));
     return ServiceResponseDto.from(service);
   }
 

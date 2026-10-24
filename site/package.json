@@ -1,0 +1,38 @@
+{
+  "name": "@clinicq/site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "THNP Clinic public website (SEO) — Next.js static site",
+  "scripts": {
+    "dev": "next dev -p 3100",
+    "build": "next build",
+    "start": "next start -p 3100",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --test-concurrency=1 \"src/**/*.test.ts\"",
+    "images": "node scripts/prepare-images.mjs",
+    "check:links": "node scripts/check-links.mjs",
+    "measure:js": "node scripts/measure-js.mjs"
+  },
+  "dependencies": {
+    "@clinicq/shared": "workspace:*",
+    "@mdx-js/loader": "^3.1.1",
+    "@mdx-js/react": "^3.1.1",
+    "@next/mdx": "16.3.3",
+    "motion": "^14.6.0",
+    "next": "^16.3.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "sharp": "^0.35.5",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/mdx": "^2.0.13",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.5",
+    "tailwindcss": "^4.3.3",
+    "typescript": "5.9.3"
+  }
+}

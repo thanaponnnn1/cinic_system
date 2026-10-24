@@ -1,5 +1,5 @@
 import { bangkokDayRange, formatBangkokDate, formatBangkokTime } from '@clinicq/shared';
-import type { CustomerCourseView, TimeSlot } from '@/lib/customer-types';
+import type { CustomerCourseView, CustomerShop, TimeSlot } from '@/lib/customer-types';
 
 /**
  * ขั้นตอนจองคิวฝั่งลูกค้า เขียนเป็น reducer ล้วน
@@ -102,6 +102,50 @@ export function initialDraft(
     courseId: preset.courseId ?? null,
   };
   return { ...draft, step: firstOpenStep(draft) };
+}
+
+/** ของที่เลือกมาทาง URL ตามที่พิมพ์มา ยังไม่รู้ว่ามีอยู่จริงไหม */
+export interface BookingPreset {
+  service: string | null;
+  provider: string | null;
+  course: string | null;
+}
+
+/**
+ * หาบริการหรือช่างจากค่าใน URL — ลิงก์ในแอปส่ง id ลิงก์จากเว็บร้านส่ง slug
+ *
+ * เทียบ id ก่อนเสมอ ลิงก์ในแอปจะได้ไม่มีวันไปโดนแถวอื่นที่บังเอิญตั้ง slug ตรงกับ id นั้น
+ */
+export function findByRef<T extends { id: string; slug: string | null }>(
+  items: readonly T[],
+  ref: string | null,
+): T | null {
+  if (!ref) return null;
+  return items.find((item) => item.id === ref) ?? items.find((item) => item.slug === ref) ?? null;
+}
+
+/**
+ * แปลงของที่เลือกมาทาง URL เป็น id ที่มีอยู่จริง ตัวที่หาไม่เจอทิ้งไปเฉย ๆ
+ *
+ * slug ผิดหรือบริการที่ร้านปิดไปแล้วต้องไม่ทำให้หน้าว่าง ลูกค้าได้ขั้นเลือกบริการตามปกติแทน
+ * คอร์สที่ผูกบริการไว้เลือกบริการนั้นให้เลย ลูกค้ากด "จองโดยใช้คอร์สนี้" แล้วไม่ต้องหาบริการเอง
+ */
+export function resolvePreset(
+  preset: BookingPreset,
+  shop: Pick<CustomerShop, 'services' | 'providers'>,
+  courses: readonly CustomerCourseView[],
+): { serviceId: string | null; providerId: string | null; courseId: string | null } {
+  const course = courses.find((c) => c.id === preset.course) ?? null;
+  const service = findByRef(shop.services, preset.service ?? course?.serviceId ?? null);
+  const provider = findByRef(shop.providers, preset.provider);
+  const courseUsable =
+    course !== null && service !== null && usableCourses([course], service.id).length > 0;
+
+  return {
+    serviceId: service?.id ?? null,
+    providerId: provider?.id ?? null,
+    courseId: courseUsable ? course.id : null,
+  };
 }
 
 /**

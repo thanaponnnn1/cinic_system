@@ -2,6 +2,7 @@ packages:
   - 'shared'
   - 'backend'
   - 'frontend'
+  - 'site'
 
 # pnpm บล็อก postinstall script ของ dependency ทั้งหมดโดย default
 # ตัวที่ตั้ง true คือตัวที่ต้องรัน postinstall จริง ไม่งั้นใช้งานไม่ได้
