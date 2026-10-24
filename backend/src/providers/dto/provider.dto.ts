@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto';
+import { IsImageUrl } from '../../common/dto/image-url.decorator';
 
 export class CreateProviderDto {
   @ApiProperty({ example: 'คุณแนน' })
@@ -16,6 +17,13 @@ export class CreateProviderDto {
   @IsString()
   @MaxLength(120)
   title?: string;
+
+  @ApiPropertyOptional({
+    example: '/demo/staff-nan.webp',
+    description: 'รูปช่างที่หน้าร้านฝั่งลูกค้าแสดง — path ในเว็บของร้าน หรือ URL https',
+  })
+  @IsImageUrl()
+  photoUrl?: string;
 }
 
 export class UpdateProviderDto extends PartialType(CreateProviderDto) {}
@@ -38,6 +46,9 @@ export class ProviderResponseDto {
   @ApiPropertyOptional()
   title: string | null;
 
+  @ApiPropertyOptional()
+  photoUrl: string | null;
+
   @ApiProperty()
   isActive: boolean;
 
@@ -45,8 +56,15 @@ export class ProviderResponseDto {
     id: string;
     name: string;
     title: string | null;
+    photoUrl: string | null;
     isActive: boolean;
   }): ProviderResponseDto {
-    return { id: entity.id, name: entity.name, title: entity.title, isActive: entity.isActive };
+    return {
+      id: entity.id,
+      name: entity.name,
+      title: entity.title,
+      photoUrl: entity.photoUrl,
+      isActive: entity.isActive,
+    };
   }
 }

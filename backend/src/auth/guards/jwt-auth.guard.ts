@@ -5,6 +5,7 @@ import { JwtService } from '@nestjs/jwt';
 import type { Request } from 'express';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import type { AuthenticatedUser, JwtPayload } from '../auth.types';
+import { bearerToken } from '../bearer-token';
 
 /**
  * ตรวจ access token ของทุก request
@@ -28,7 +29,7 @@ export class JwtAuthGuard implements CanActivate {
     if (isPublic) return true;
 
     const request = context.switchToHttp().getRequest<Request & { user?: AuthenticatedUser }>();
-    const token = this.extractToken(request);
+    const token = bearerToken(request);
 
     if (!token) {
       throw new UnauthorizedException('ต้องเข้าสู่ระบบก่อนใช้งาน');
@@ -45,13 +46,5 @@ export class JwtAuthGuard implements CanActivate {
       // ไม่ส่งรายละเอียดว่าโทเคนหมดอายุหรือผิดรูปแบบ — บอกแค่ว่าใช้ไม่ได้
       throw new UnauthorizedException('เซสชันหมดอายุหรือไม่ถูกต้อง กรุณาเข้าสู่ระบบใหม่');
     }
-  }
-
-  private extractToken(request: Request): string | undefined {
-    const header = request.headers.authorization;
-    if (!header) return undefined;
-
-    const [scheme, token] = header.split(' ');
-    return scheme?.toLowerCase() === 'bearer' ? token : undefined;
   }
 }

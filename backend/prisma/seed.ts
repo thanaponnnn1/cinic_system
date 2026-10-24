@@ -15,8 +15,15 @@ import { PrismaClient } from '../src/generated/prisma/client';
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL ?? '' });
 const prisma = new PrismaClient({ adapter });
 
-/** รหัสผ่านเดียวกันทุกบัญชีเดโม — ของจริงตอนส่งมอบต้องเปลี่ยนทั้งหมด */
-const DEMO_PASSWORD = 'demo1234';
+/** รหัสผ่านตั้งต้นของบัญชีเดโม — ใช้เมื่อไม่ได้ตั้ง SEED_PASSWORD */
+const DEFAULT_SEED_PASSWORD = 'demo1234';
+
+/**
+ * รหัสผ่านของบัญชีที่ seed สร้างใหม่ — อ่านจาก env เพราะหน้าจอร้านเปิดเข้าจากอินเทอร์เน็ตได้
+ * และรหัสที่อยู่ในโค้ดบน git ใครก็อ่านได้ · บัญชีที่มีอยู่แล้วไม่ถูกทับ เปลี่ยนรหัสใช้ pnpm user:set-password
+ */
+const SEED_PASSWORD = process.env.SEED_PASSWORD || DEFAULT_SEED_PASSWORD;
+const USING_DEFAULT_PASSWORD = SEED_PASSWORD === DEFAULT_SEED_PASSWORD;
 
 const USERS = [
   {
@@ -36,21 +43,52 @@ const USERS = [
   },
 ];
 
+/**
+ * รูปช่างและรูปบริการชี้ไปที่ frontend/public/demo/ (Phase 10 หน้าร้านฝั่งลูกค้า)
+ *
+ * แถวที่มีอยู่แล้วถูกอัปเดตทับด้วยค่าชุดนี้ทุกครั้งที่รัน seed ฐานข้อมูลที่ seed ไว้ก่อน
+ * มีคอลัมน์รูปจึงได้รูปครบโดยไม่ต้องล้างข้อมูลทิ้ง
+ */
 const PROVIDERS = [
-  { name: 'คุณแนน', title: 'ช่างผู้เชี่ยวชาญ' },
-  { name: 'คุณเบส', title: 'ช่างอาวุโส' },
-  { name: 'คุณฟ้า', title: 'ช่าง' },
+  { name: 'คุณแนน', title: 'ช่างผู้เชี่ยวชาญ', photoUrl: '/demo/staff-nan.webp' },
+  { name: 'คุณเบส', title: 'ช่างอาวุโส', photoUrl: '/demo/staff-best.webp' },
+  { name: 'คุณฟ้า', title: 'ช่าง', photoUrl: '/demo/staff-fah.webp' },
 ];
 
 const SERVICES = [
-  { name: 'ทรีตเมนต์บำรุงผิวหน้า', durationMin: 60, price: 1500 },
-  { name: 'ทำความสะอาดผิวหน้า', durationMin: 45, price: 900 },
-  { name: 'นวดหน้าผ่อนคลาย', durationMin: 30, price: 600 },
-  { name: 'ดูแลผิวรอบดวงตา', durationMin: 30, price: 800 },
-  { name: 'ทรีตเมนต์บำรุงผม', durationMin: 90, price: 2200 },
-  { name: 'สระไดร์', durationMin: 45, price: 450 },
-  { name: 'ตัดแต่งทรงผม', durationMin: 60, price: 800 },
-  { name: 'ปรึกษาและวางแผนการดูแล', durationMin: 30, price: 0 },
+  {
+    name: 'ทรีตเมนต์บำรุงผิวหน้า',
+    durationMin: 60,
+    price: 1500,
+    imageUrl: '/demo/svc-facial-treatment.webp',
+  },
+  {
+    name: 'ทำความสะอาดผิวหน้า',
+    durationMin: 45,
+    price: 900,
+    imageUrl: '/demo/svc-facial-cleansing.webp',
+  },
+  {
+    name: 'นวดหน้าผ่อนคลาย',
+    durationMin: 30,
+    price: 600,
+    imageUrl: '/demo/svc-face-massage.webp',
+  },
+  { name: 'ดูแลผิวรอบดวงตา', durationMin: 30, price: 800, imageUrl: '/demo/svc-eye-care.webp' },
+  {
+    name: 'ทรีตเมนต์บำรุงผม',
+    durationMin: 90,
+    price: 2200,
+    imageUrl: '/demo/svc-hair-treatment.webp',
+  },
+  { name: 'สระไดร์', durationMin: 45, price: 450, imageUrl: '/demo/svc-wash-blowdry.webp' },
+  { name: 'ตัดแต่งทรงผม', durationMin: 60, price: 800, imageUrl: '/demo/svc-haircut.webp' },
+  {
+    name: 'ปรึกษาและวางแผนการดูแล',
+    durationMin: 30,
+    price: 0,
+    imageUrl: '/demo/svc-consult.webp',
+  },
 ];
 
 /**
@@ -346,7 +384,7 @@ function daysFromNow(days: number): Date {
 async function main(): Promise<void> {
   console.log('เริ่มใส่ข้อมูลตั้งต้น...\n');
 
-  const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
+  const passwordHash = await bcrypt.hash(SEED_PASSWORD, 12);
 
   for (const user of USERS) {
     await prisma.user.upsert({
@@ -489,15 +527,28 @@ async function main(): Promise<void> {
   console.log(`  ยินยอมรับการตลาด        ${CUSTOMERS.filter((c) => c.marketing).length} ราย`);
   console.log(`  หายเกิน 90 วัน          ${inactive90} ราย  (กลุ่มเป้าหมายแคมเปญตามกลับ)`);
 
-  console.log('\nบัญชีสำหรับเข้าสู่ระบบ (รหัสผ่านเดียวกันทุกบัญชี)');
+  // ไม่พิมพ์รหัสที่ตั้งเองออกจอ เพราะ log ของเครื่อง deploy มักถูกเก็บไว้ให้หลายคนเปิดดูได้
+  const shownPassword = USING_DEFAULT_PASSWORD ? DEFAULT_SEED_PASSWORD : '********';
+
+  console.log(
+    '\nบัญชีสำหรับเข้าสู่ระบบ (รหัสผ่านเดียวกันทุกบัญชี · บัญชีที่มีอยู่แล้วใช้รหัสเดิม)',
+  );
   console.log('┌────────────────────────────┬──────────────┬────────────┐');
   console.log('│ อีเมล                      │ รหัสผ่าน      │ สิทธิ์      │');
   console.log('├────────────────────────────┼──────────────┼────────────┤');
   for (const u of USERS) {
-    console.log(`│ ${u.email.padEnd(26)} │ ${DEMO_PASSWORD.padEnd(12)} │ ${u.role.padEnd(10)} │`);
+    console.log(`│ ${u.email.padEnd(26)} │ ${shownPassword.padEnd(12)} │ ${u.role.padEnd(10)} │`);
   }
   console.log('└────────────────────────────┴──────────────┴────────────┘');
   console.log('\nเสร็จเรียบร้อย');
+
+  if (USING_DEFAULT_PASSWORD && process.env.NODE_ENV === 'production') {
+    console.warn(
+      '\n⚠️  คำเตือน: บัญชีที่ seed สร้างใช้รหัสผ่านตั้งต้น demo1234 บน production\n' +
+        '   ใครที่เปิดหน้าจอร้านจากอินเทอร์เน็ตได้ก็เข้าระบบได้ ตั้ง SEED_PASSWORD ก่อน seed\n' +
+        '   หรือเปลี่ยนรหัสทันทีด้วย pnpm user:set-password <อีเมล>',
+    );
+  }
 }
 
 main()

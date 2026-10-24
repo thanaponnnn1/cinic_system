@@ -1,9 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DeliveryStatus, MsgType } from '@clinicq/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { LineMessagingService } from '../line/line-messaging.service';
 import { ClockService } from '../clock/clock.service';
 import { sleep } from '../common/sleep';
+import { LIFF_PATH, liffUrl } from '../line/liff-url';
 import { daysBetween } from './dto/course.dto';
 import { formatCourseExpiry, type ExpiringCourseLine } from './course-expiry-message';
 
@@ -46,6 +48,7 @@ export class CourseExpiryService {
     private readonly prisma: PrismaService,
     private readonly line: LineMessagingService,
     private readonly clock: ClockService,
+    private readonly config: ConfigService,
   ) {}
 
   async notifyExpiring(): Promise<CourseExpiryResult> {
@@ -105,6 +108,7 @@ export class CourseExpiryService {
       byCustomer.set(customer.id, entry);
     }
 
+    const coursesUrl = liffUrl(this.config.get<string>('LIFF_ID'), LIFF_PATH.courses);
     let index = 0;
 
     for (const [customerId, entry] of byCustomer) {
@@ -118,7 +122,7 @@ export class CourseExpiryService {
 
       const sent = await this.line.pushText(
         entry.lineUserId,
-        formatCourseExpiry(entry.name, entry.lines),
+        formatCourseExpiry(entry.name, entry.lines, coursesUrl),
       );
 
       await this.prisma.messageLog.create({

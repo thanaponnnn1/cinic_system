@@ -19,6 +19,8 @@
     "db:studio": "prisma studio",
     "db:format": "prisma format",
     "db:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
+    "demo:reset": "ts-node --transpile-only src/demo/demo-reset.cli.ts",
+    "user:set-password": "ts-node --project tsconfig.seed.json prisma/set-password.ts",
     "worker": "ts-node -r tsconfig-paths/register src/main.worker.ts",
     "worker:dev": "nest start --watch --entryFile main.worker",
     "worker:prod": "node dist/main.worker.js"

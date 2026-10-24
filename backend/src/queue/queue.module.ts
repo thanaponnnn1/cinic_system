@@ -46,6 +46,9 @@ export class QueueModule implements OnApplicationShutdown {
     const connection = this.moduleRef.get<IORedis>(QUEUE_CONNECTION, { strict: false });
 
     await queue.close();
+    // คิวได้ connection ที่ duplicate ส่งเข้าไป BullMQ จึงถือว่าเป็นของคนอื่นและ close() ไม่ปิดให้
+    // ไม่สั่งเองแล้วโปรเซสที่ควรจบ (pnpm demo:reset) จะค้างอยู่ตลอด
+    await queue.disconnect();
     connection.disconnect();
     this.logger.log('ปิดการเชื่อมต่อคิวงานเรียบร้อย');
   }

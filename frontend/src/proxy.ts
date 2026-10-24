@@ -13,6 +13,11 @@ import { REFRESH_COOKIE } from '@/lib/session';
 export function proxy(request: NextRequest): NextResponse {
   const hasSession = Boolean(request.cookies.get(REFRESH_COOKIE)?.value);
   const { pathname, search } = request.nextUrl;
+
+  // หน้าลูกค้าเป็นโครงหน้าสาธารณะ ตัวตนของลูกค้าตรวจกันเองด้วย cookie อีกใบ ไม่เกี่ยวกับ session พนักงาน
+  // เช็คที่นี่แทนการตัดออกใน matcher เพราะ regex /c จะกลืน /calendar /campaigns /courses /customers ไปด้วย
+  if (pathname === '/c' || pathname.startsWith('/c/')) return NextResponse.next();
+
   const isLoginPage = pathname === '/login';
 
   if (!hasSession && !isLoginPage) {
@@ -35,5 +40,5 @@ export const config = {
    * ไม่ครอบ /api/* เพราะ route handler พวกนั้นต้องทำงานได้แม้ตอนยังไม่มีเซสชัน
    * (หน้าเข้าสู่ระบบเรียก /api/auth/login) และไม่ครอบไฟล์สาธารณะกับรูปภาพ
    */
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|brand).*)'],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|brand|demo).*)'],
 };

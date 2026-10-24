@@ -20,6 +20,7 @@ import { CampaignsModule } from './campaigns/campaigns.module';
 import { CoursesModule } from './courses/courses.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { MessagesModule } from './messages/messages.module';
+import { CustomerPortalModule } from './customer-portal/customer-portal.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { MessagesModule } from './messages/messages.module';
     CoursesModule,
     DashboardModule,
     MessagesModule,
+    CustomerPortalModule,
   ],
 })
 export class AppModule {}

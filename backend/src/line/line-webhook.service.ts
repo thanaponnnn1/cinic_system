@@ -7,6 +7,8 @@ import { WaitlistEngineService, type ClaimResult } from '../waitlist/waitlist-en
 import type { LineActionAppointment, LineActionResult } from '../appointments/line-action.types';
 import { formatBangkokTime, formatThaiDate } from '../common/bangkok-time';
 import { LineMessagingService } from './line-messaging.service';
+import { LineAccountLinkService } from './line-account-link.service';
+import { LIFF_PATH, liffUrl } from './liff-url';
 import { extractLinkCode } from './link-code';
 import { PostbackAction, parsePostback } from './postback-data';
 import {
@@ -31,6 +33,8 @@ export const LINE_REPLY = {
     'บัญชี LINE นี้ผูกกับข้อมูลลูกค้าอีกท่านอยู่แล้วครับ 🙏\nรบกวนติดต่อทางร้านเพื่อตรวจสอบให้อีกครั้งนะครับ',
   fallback:
     'ขอบคุณที่ทักมาครับ 🙏\nแชทนี้ใช้สำหรับแจ้งเตือนนัดอัตโนมัติ หากต้องการจองคิว เลื่อนนัด หรือสอบถามเพิ่มเติม รบกวนติดต่อทางร้านโดยตรงนะครับ',
+  fallbackWithBooking: (bookingUrl: string) =>
+    `ขอบคุณที่ทักมาครับ 🙏\nจองคิวเองได้ตลอด 24 ชั่วโมงที่ ${bookingUrl}\nหากต้องการเลื่อนนัดหรือสอบถามเพิ่มเติม รบกวนติดต่อทางร้านโดยตรงนะครับ`,
 
   confirmed: (appointment: LineActionAppointment) =>
     `ยืนยันเรียบร้อยแล้วครับ 🙏\n${describeAppointment(appointment)}\nแล้วพบกันครับ`,
@@ -104,6 +108,7 @@ export class LineWebhookService {
     private readonly appointments: AppointmentsService,
     private readonly waitlist: WaitlistEngineService,
     private readonly config: ConfigService,
+    private readonly accountLink: LineAccountLinkService,
   ) {}
 
   async handleEvents(events: LineWebhookEvent[]): Promise<void> {
@@ -146,7 +151,7 @@ export class LineWebhookService {
 
     if (!payload) {
       this.logger.warn('ได้รับ postback ที่รูปแบบไม่ตรงกับปุ่มของระบบ');
-      await this.line.replyText(replyToken, LINE_REPLY.fallback);
+      await this.line.replyText(replyToken, this.fallbackReply());
       return;
     }
 
@@ -203,6 +208,13 @@ export class LineWebhookService {
     }
   }
 
+  /** ร้านที่ตั้งหน้าลูกค้าแล้ว ชี้ให้ไปจองเองแทนการบอกให้ติดต่อร้าน — ข้อความที่ทักมาเองคือคนที่อยากจองอยู่แล้ว */
+  private fallbackReply(): string {
+    const bookingUrl = liffUrl(this.config.get<string>('LIFF_ID'), LIFF_PATH.book);
+
+    return bookingUrl ? LINE_REPLY.fallbackWithBooking(bookingUrl) : LINE_REPLY.fallback;
+  }
+
   /** ส่งเรื่องที่ร้านต้องรู้เข้า LINE ของแอดมิน — ไม่ได้ตั้งค่าไว้ก็แค่ข้ามไป ไม่ทำให้ flow ลูกค้าพัง */
   private async notifyAdmin(text: string): Promise<void> {
     const adminUserId = this.config.get<string>('LINE_ADMIN_USER_ID');
@@ -224,57 +236,36 @@ export class LineWebhookService {
     const code = extractLinkCode(event.message.text);
 
     if (!code) {
-      await this.line.replyText(replyToken, LINE_REPLY.fallback);
+      await this.line.replyText(replyToken, this.fallbackReply());
       return;
     }
 
     await this.linkAccount(code, lineUserId, replyToken);
   }
 
-  /**
-   * ผูกบัญชี LINE เข้ากับลูกค้าที่ถือรหัสนั้น
-   *
-   * รหัสใช้ได้ครั้งเดียวจริง ๆ เพราะล้างทิ้งพร้อมกับการผูกในคำสั่งเดียว
-   */
+  /** ผูกบัญชีด้วยรหัสที่ลูกค้าพิมพ์มา — กฎการผูกอยู่ที่ LineAccountLinkService ที่นี่แค่ตอบในแชท */
   private async linkAccount(code: string, lineUserId: string, replyToken: string): Promise<void> {
-    const customer = await this.prisma.customer.findFirst({
-      where: { linkCode: code, isActive: true },
-      select: { id: true, name: true },
-    });
+    const result = await this.accountLink.link(code, lineUserId);
 
-    if (!customer) {
-      await this.line.replyText(replyToken, LINE_REPLY.codeNotFound);
-      return;
+    switch (result.status) {
+      case 'code_not_found':
+        await this.line.replyText(replyToken, LINE_REPLY.codeNotFound);
+        return;
+      case 'line_already_linked_to_other':
+        await this.line.replyText(replyToken, LINE_REPLY.alreadyLinkedToOther);
+        return;
+      case 'linked':
+        await this.line.replyText(replyToken, LINE_REPLY.linked(result.customer.name));
+
+        // ผูกผ่านหน้าเว็บไม่มีข้อความยืนยันออกไป บันทึกนี้จึงอยู่ที่ฝั่งแชทเท่านั้น
+        await this.prisma.messageLog.create({
+          data: {
+            customerId: result.customer.id,
+            type: MsgType.LINK_CONFIRM,
+            deliveryStatus: DeliveryStatus.SENT,
+          },
+        });
     }
-
-    // lineUserId เป็น unique ในฐานข้อมูล ถ้าไม่เช็กก่อนจะได้ error ดิบ ๆ แทนคำตอบที่ลูกค้าอ่านรู้เรื่อง
-    const owner = await this.prisma.customer.findUnique({
-      where: { lineUserId },
-      select: { id: true },
-    });
-
-    if (owner && owner.id !== customer.id) {
-      this.logger.warn(
-        `บัญชี LINE ผูกกับลูกค้า ${owner.id} อยู่แล้ว จึงไม่ผูกซ้ำให้ ${customer.id}`,
-      );
-      await this.line.replyText(replyToken, LINE_REPLY.alreadyLinkedToOther);
-      return;
-    }
-
-    await this.prisma.customer.update({
-      where: { id: customer.id },
-      data: { lineUserId, linkCode: null },
-    });
-
-    await this.line.replyText(replyToken, LINE_REPLY.linked(customer.name));
-
-    await this.prisma.messageLog.create({
-      data: {
-        customerId: customer.id,
-        type: MsgType.LINK_CONFIRM,
-        deliveryStatus: DeliveryStatus.SENT,
-      },
-    });
   }
 }
 

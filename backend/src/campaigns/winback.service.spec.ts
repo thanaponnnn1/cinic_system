@@ -4,6 +4,7 @@ import { sleep } from '../common/sleep';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { LineMessagingService } from '../line/line-messaging.service';
 import type { ClockService } from '../clock/clock.service';
+import type { ConfigService } from '@nestjs/config';
 
 // หน่วงจังหวะจริงหนึ่งวินาทีต่อข้อความ ทำให้เทสต์ช้าโดยไม่ได้พิสูจน์อะไรเพิ่ม
 // จึงแทนที่ด้วย mock แล้วตรวจแทนว่า "ถูกเรียกกี่ครั้ง" ซึ่งคือสิ่งที่ต้องการรับประกันจริง ๆ
@@ -29,6 +30,7 @@ describe('WinbackService', () => {
   const campaignRunDb = { create: jest.fn(), delete: jest.fn() };
   const messageLogDb = { create: jest.fn() };
   const line = { pushText: jest.fn() };
+  let liffId: string | undefined;
 
   const prisma = {
     campaign: campaignDb,
@@ -42,11 +44,15 @@ describe('WinbackService', () => {
       prisma as unknown as PrismaService,
       line as unknown as LineMessagingService,
       { now: () => NOW, refresh: jest.fn() } as unknown as ClockService,
+      {
+        get: (key: string) => (key === 'LIFF_ID' ? liffId : undefined),
+      } as unknown as ConfigService,
     );
   }
 
   beforeEach(() => {
     jest.clearAllMocks();
+    liffId = undefined;
     campaignDb.findMany.mockResolvedValue([CAMPAIGN]);
     campaignDb.findUnique.mockResolvedValue(CAMPAIGN);
     customerDb.findMany.mockResolvedValue([]);
@@ -87,6 +93,19 @@ describe('WinbackService', () => {
       await build().runCampaign('camp_1');
 
       expect(line.pushText).toHaveBeenCalledWith('Ucus_1', 'คิดถึงคุณ สมหญิง จังเลยค่ะ');
+    });
+
+    it('ตั้ง LIFF_ID แล้ว ต่อลิงก์จองคิวท้ายข้อความตอนส่ง โดยแม่แบบในฐานข้อมูลไม่เปลี่ยน', async () => {
+      liffId = '2001234567-AbCdEfGh';
+      customerDb.findMany.mockResolvedValue([target('cus_1', 'สมหญิง')]);
+
+      await build().runCampaign('camp_1');
+
+      expect(line.pushText).toHaveBeenCalledWith(
+        'Ucus_1',
+        'คิดถึงคุณ สมหญิง จังเลยค่ะ\n\n👉 จองคิวออนไลน์ได้เลยที่ https://liff.line.me/2001234567-AbCdEfGh/c/book',
+      );
+      expect(CAMPAIGN.message).toBe('คิดถึงคุณ {name} จังเลยค่ะ');
     });
 
     it('จองสิทธิ์ใน CampaignRun ก่อนส่ง — งานที่ถูกรันซ้ำต้องไม่กลายเป็นข้อความซ้ำ', async () => {

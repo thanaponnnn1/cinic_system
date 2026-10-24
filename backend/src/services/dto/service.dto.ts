@@ -12,6 +12,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../common/dto/pagination.dto';
+import { IsImageUrl } from '../../common/dto/image-url.decorator';
 
 export class CreateServiceDto {
   @ApiProperty({
@@ -36,6 +37,13 @@ export class CreateServiceDto {
   @IsNumber({ maxDecimalPlaces: 2 }, { message: 'ราคาต้องมีทศนิยมไม่เกิน 2 ตำแหน่ง' })
   @Min(0, { message: 'ราคาต้องไม่ติดลบ' })
   price: number;
+
+  @ApiPropertyOptional({
+    example: '/demo/svc-facial-treatment.webp',
+    description: 'รูปที่หน้าร้านฝั่งลูกค้าแสดง — path ในเว็บของร้าน หรือ URL https',
+  })
+  @IsImageUrl()
+  imageUrl?: string;
 }
 
 export class UpdateServiceDto extends PartialType(CreateServiceDto) {}
@@ -61,6 +69,9 @@ export class ServiceResponseDto {
   @ApiProperty({ description: 'ราคาเป็นตัวเลข ไม่ใช่ข้อความ' })
   price: number;
 
+  @ApiPropertyOptional()
+  imageUrl: string | null;
+
   @ApiProperty()
   isActive: boolean;
 
@@ -70,6 +81,7 @@ export class ServiceResponseDto {
     durationMin: number;
     // Prisma คืน Decimal มาเป็นออบเจ็กต์ ไม่ใช่ number จึงต้องแปลงก่อนส่งออก
     price: { toString(): string };
+    imageUrl: string | null;
     isActive: boolean;
   }): ServiceResponseDto {
     return {
@@ -77,6 +89,7 @@ export class ServiceResponseDto {
       name: entity.name,
       durationMin: entity.durationMin,
       price: Number(entity.price.toString()),
+      imageUrl: entity.imageUrl,
       isActive: entity.isActive,
     };
   }

@@ -1,10 +1,11 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { APPT_STATUS_LABEL, ApptStatus, STATUS_COLOR, formatBangkokDate } from '@clinicq/shared';
 import { apiGet } from '@/lib/api';
 import type { DayBoard } from '@/lib/api-types';
+import { boardAppointmentIds, newlyArrivedIds } from '@/lib/board-arrivals';
 import { money, thaiDateOf } from '@/lib/format';
 import { AppointmentCard } from '@/components/appointments/appointment-card';
 import { AppointmentFormModal } from '@/components/appointments/appointment-form';
@@ -18,8 +19,14 @@ import {
   StatusBadge,
 } from '@/components/ui/primitives';
 
-/** ทุกกี่มิลลิวินาทีถึงจะดึงข้อมูลใหม่ — สิบวินาทีทำให้เดโม "กดใน LINE แล้วจอเปลี่ยน" เห็นสด */
-const REFRESH_MS = 10_000;
+/**
+ * ทุกกี่มิลลิวินาทีถึงจะดึงข้อมูลใหม่ — ห้าวินาทีทำให้เดโม "ลูกค้าจองในมือถือแล้วคิวโผล่บนจอนี้"
+ * เห็นในช็อตเดียวโดยไม่ต้องรอนานจนคนดูหลุด
+ */
+const REFRESH_MS = 5_000;
+
+/** ขอบทองของคิวใหม่อยู่นานเท่านี้ — พอให้คนหันมาเห็น แต่ไม่ค้างจนกลายเป็นของตกแต่งถาวร */
+const ARRIVAL_HIGHLIGHT_MS = 3_000;
 
 /**
  * บอร์ดคิววันนี้ — หน้าที่เปิดค้างไว้ทั้งวันหน้าร้าน
@@ -36,6 +43,7 @@ export default function BoardPage() {
     queryFn: () => apiGet<DayBoard>('appointments/day-board', { date }),
     refetchInterval: REFRESH_MS,
   });
+  const arrived = useArrivalHighlights(board.data, date);
 
   return (
     <div className="space-y-6">
@@ -43,7 +51,7 @@ export default function BoardPage() {
         <div>
           <h1 className="font-display text-2xl text-gold-200">คิววันนี้</h1>
           <p className="mt-1 text-sm text-gold-300/60">
-            {thaiDateOf(`${date}T00:00:00.000Z`)} · อัปเดตเองทุก 10 วินาที
+            {thaiDateOf(`${date}T00:00:00.000Z`)} · อัปเดตเองทุก {REFRESH_MS / 1000} วินาที
           </p>
         </div>
 
@@ -92,7 +100,11 @@ export default function BoardPage() {
                   ) : (
                     <div className="space-y-3 p-3">
                       {provider.appointments.map((appointment) => (
-                        <AppointmentCard key={appointment.id} appointment={appointment} />
+                        <AppointmentCard
+                          key={appointment.id}
+                          appointment={appointment}
+                          highlight={arrived.has(appointment.id)}
+                        />
                       ))}
                     </div>
                   )}
@@ -108,6 +120,43 @@ export default function BoardPage() {
       <AppointmentFormModal open={formOpen} onClose={() => setFormOpen(false)} defaultDate={date} />
     </div>
   );
+}
+
+/**
+ * คิวที่เพิ่งเข้าบอร์ดหลังเปิดหน้า — คืนชุด id ที่ควรมีขอบทองอยู่ตอนนี้
+ *
+ * จำ id ที่เห็นแล้วแยกตามวัน เปลี่ยนวันจึงนับเป็นการโหลดครั้งแรกของวันนั้น ไม่ใช่คิวใหม่ทั้งบอร์ด
+ * ตัวจับเวลาลบขอบทองไม่ถูกยกเลิกเมื่อข้อมูลรอบถัดไปมาถึง ไม่งั้นการดึงซ้ำเร็ว ๆ จะทำให้ขอบค้าง
+ */
+function useArrivalHighlights(board: DayBoard | undefined, date: string): ReadonlySet<string> {
+  const seen = useRef<{ date: string; ids: Set<string> } | null>(null);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [highlighted, setHighlighted] = useState<ReadonlySet<string>>(() => new Set());
+
+  useEffect(() => {
+    if (!board) return;
+
+    const current = boardAppointmentIds(board);
+    const previous = seen.current?.date === date ? seen.current.ids : null;
+    seen.current = { date, ids: current };
+
+    const arrived = newlyArrivedIds(previous, current);
+    if (arrived.length === 0) return;
+
+    setHighlighted((prev) => new Set([...prev, ...arrived]));
+    timers.current.push(
+      setTimeout(() => {
+        setHighlighted((prev) => new Set([...prev].filter((id) => !arrived.includes(id))));
+      }, ARRIVAL_HIGHLIGHT_MS),
+    );
+  }, [board, date]);
+
+  useEffect(() => {
+    const pending = timers.current;
+    return () => pending.forEach(clearTimeout);
+  }, []);
+
+  return highlighted;
 }
 
 /**

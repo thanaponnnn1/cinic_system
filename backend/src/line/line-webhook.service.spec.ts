@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { DeliveryStatus, MsgType } from '@clinicq/shared';
 import { LineWebhookService } from './line-webhook.service';
 import { LineMessagingService } from './line-messaging.service';
+import { LineAccountLinkService } from './line-account-link.service';
 import { AppointmentsService } from '../appointments/appointments.service';
 import { WaitlistEngineService } from '../waitlist/waitlist-engine.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -35,8 +36,10 @@ describe('LineWebhookService — ผูกบัญชีด้วยรหั�
   };
   const messageLogDb = { create: jest.fn() };
   const line = { replyText: jest.fn(), pushText: jest.fn() };
+  let liffId: string | undefined;
 
   beforeEach(async () => {
+    liffId = undefined;
     [...Object.values(customerDb), messageLogDb.create, ...Object.values(line)].forEach((fn) =>
       fn.mockReset(),
     );
@@ -46,6 +49,7 @@ describe('LineWebhookService — ผูกบัญชีด้วยรหั�
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LineWebhookService,
+        LineAccountLinkService,
         {
           provide: PrismaService,
           useValue: { customer: customerDb, messageLog: messageLogDb },
@@ -56,7 +60,10 @@ describe('LineWebhookService — ผูกบัญชีด้วยรหั�
           useValue: { confirmFromLine: jest.fn(), requestRescheduleFromLine: jest.fn() },
         },
         { provide: WaitlistEngineService, useValue: { claim: jest.fn() } },
-        { provide: ConfigService, useValue: { get: () => 'Uadmin' } },
+        {
+          provide: ConfigService,
+          useValue: { get: (key: string) => (key === 'LIFF_ID' ? liffId : 'Uadmin') },
+        },
       ],
     }).compile();
 
@@ -123,6 +130,25 @@ describe('LineWebhookService — ผูกบัญชีด้วยรหั�
 
     expect(customerDb.findFirst).not.toHaveBeenCalled();
     expect(line.replyText).toHaveBeenCalledWith('reply-token-1', expect.any(String));
+  });
+
+  it('ไม่ได้ตั้ง LIFF_ID คำตอบ default เหมือนก่อนมีหน้าลูกค้าทุกตัวอักษร', async () => {
+    await service.handleEvents([textEvent('สวัสดีครับ อยากจองคิว')]);
+
+    expect(line.replyText).toHaveBeenCalledWith(
+      'reply-token-1',
+      'ขอบคุณที่ทักมาครับ 🙏\nแชทนี้ใช้สำหรับแจ้งเตือนนัดอัตโนมัติ หากต้องการจองคิว เลื่อนนัด หรือสอบถามเพิ่มเติม รบกวนติดต่อทางร้านโดยตรงนะครับ',
+    );
+  });
+
+  it('ตั้ง LIFF_ID แล้ว คำตอบ default ชี้ไปหน้าจองคิวแทนการบอกให้ติดต่อร้านเพื่อจอง', async () => {
+    liffId = '2001234567-AbCdEfGh';
+
+    await service.handleEvents([textEvent('สวัสดีครับ อยากจองคิว')]);
+
+    const reply = line.replyText.mock.calls[0][1] as string;
+    expect(reply).toContain('https://liff.line.me/2001234567-AbCdEfGh/c/book');
+    expect(reply).not.toContain('หากต้องการจองคิว');
   });
 
   it('ข้ามอีเวนต์ชนิดที่ยังไม่รองรับโดยไม่ล้ม — LINE ส่งชนิดใหม่มาได้เสมอ', async () => {

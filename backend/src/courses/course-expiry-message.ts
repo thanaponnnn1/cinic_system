@@ -17,7 +17,11 @@ export interface ExpiringCourseLine {
  * ข้อความบอกแค่ชื่อคอร์ส ครั้งที่เหลือ และวันหมดอายุ ไม่มีรายละเอียดการรักษาโดยโครงสร้าง
  * (ข้อ 4 ของ docs/plan-clinic-demo.md) — ระบบไม่ได้เก็บข้อมูลนั้นไว้ตั้งแต่แรกอยู่แล้ว
  */
-export function formatCourseExpiry(customerName: string, courses: ExpiringCourseLine[]): string {
+export function formatCourseExpiry(
+  customerName: string,
+  courses: ExpiringCourseLine[],
+  coursesUrl?: string,
+): string {
   const lines = courses.map(
     (course) =>
       `• ${course.packageName} — เหลือ ${course.remainingSessions} ครั้ง ` +
@@ -30,5 +34,7 @@ export function formatCourseExpiry(customerName: string, courses: ExpiringCourse
     ...lines,
     '',
     'จองคิวมาใช้ให้ครบนะคะ ทักแชทนี้ได้เลยค่ะ',
+    // ลิงก์ไปหน้าคอร์สของลูกค้า ไม่ใช่หน้าจอง เพราะหน้านั้นมีปุ่ม "จองโดยใช้คอร์สนี้" ที่ตัดครั้งให้ถูกคอร์ส
+    ...(coursesUrl ? [`👉 ดูคอร์สและจองคิวได้ที่ ${coursesUrl}`] : []),
   ].join('\n');
 }

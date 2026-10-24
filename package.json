@@ -23,6 +23,7 @@
     "db:studio": "pnpm --filter @clinicq/backend db:studio",
     "db:format": "pnpm --filter @clinicq/backend db:format",
     "db:seed": "pnpm --filter @clinicq/backend db:seed",
+    "demo:reset": "pnpm --filter @clinicq/backend demo:reset",
     "prepare": "husky"
   },
   "devDependencies": {

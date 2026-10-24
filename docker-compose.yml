@@ -13,8 +13,8 @@ services:
       TZ: Asia/Bangkok
       PGTZ: Asia/Bangkok
     ports:
-      # map 5433 บนเครื่อง เพื่อไม่ชนกับ postgres ตัวอื่นที่อาจติดตั้งไว้แล้ว
-      - '5433:5432'
+      # map 5434 บนเครื่อง เพื่อไม่ชนกับ postgres ตัวอื่นที่อาจติดตั้งไว้แล้ว
+      - '5434:5432'
     volumes:
       - clinicq-pgdata:/var/lib/postgresql/data
     healthcheck:

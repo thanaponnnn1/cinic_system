@@ -162,6 +162,8 @@ model Provider {
   name      String
   /// ตำแหน่งที่แสดงให้ลูกค้าเห็น เช่น "ช่างผู้เชี่ยวชาญ"
   title     String?
+  /// รูปช่างที่หน้าร้านฝั่งลูกค้าแสดง — path ใต้ frontend/public หรือ URL https เต็ม
+  photoUrl  String?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -177,6 +179,8 @@ model Service {
   name        String
   durationMin Int
   price       Decimal  @db.Decimal(10, 2)
+  /// รูปบริการที่หน้าร้านฝั่งลูกค้าแสดง — อยู่ใน DB ให้เจ้าของร้านเปลี่ยนเองได้ ไม่ฝังในโค้ดหน้าเว็บ
+  imageUrl    String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

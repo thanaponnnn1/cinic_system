@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "installCommand": "cd .. && pnpm install --frozen-lockfile --filter \"@clinicq/frontend...\"",
+  "buildCommand": "cd .. && pnpm --filter @clinicq/shared build && pnpm --filter @clinicq/frontend build"
+}

@@ -4,7 +4,8 @@ import type { PaginatedResponse } from '@clinicq/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { LineMessagingService } from '../line/line-messaging.service';
 import { paginate } from '../common/dto/pagination.dto';
-import { personalize } from './winback.service';
+import { winbackText } from './winback.service';
+import { LIFF_PATH, liffUrl } from '../line/liff-url';
 import {
   CampaignResponseDto,
   type CampaignResultsDto,
@@ -119,7 +120,8 @@ export class CampaignsService {
       );
     }
 
-    const text = `🧪 ทดสอบแคมเปญ "${campaign.name}"\n\n${personalize(campaign.message, 'คุณลูกค้า')}`;
+    const bookingUrl = liffUrl(this.config.get<string>('LIFF_ID'), LIFF_PATH.book);
+    const text = `🧪 ทดสอบแคมเปญ "${campaign.name}"\n\n${winbackText(campaign.message, 'คุณลูกค้า', bookingUrl)}`;
     const sent = await this.line.pushText(adminUserId, text);
 
     if (!sent) this.logger.warn(`ส่งข้อความทดสอบของแคมเปญ ${id} ไม่สำเร็จ`);

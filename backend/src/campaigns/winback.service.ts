@@ -1,9 +1,11 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { DeliveryStatus, MsgType } from '@clinicq/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { LineMessagingService } from '../line/line-messaging.service';
 import { ClockService } from '../clock/clock.service';
 import { sleep } from '../common/sleep';
+import { LIFF_PATH, liffUrl } from '../line/liff-url';
 import { NAME_PLACEHOLDER } from './dto/campaign.dto';
 
 /**
@@ -52,6 +54,7 @@ export class WinbackService {
     private readonly prisma: PrismaService,
     private readonly line: LineMessagingService,
     private readonly clock: ClockService,
+    private readonly config: ConfigService,
   ) {}
 
   /** งานรายวัน — ยิงทุกแคมเปญที่เปิดอยู่ */
@@ -81,6 +84,7 @@ export class WinbackService {
     if (!campaign) throw new NotFoundException('ไม่พบแคมเปญนี้');
 
     const targets = await this.findTargets(campaignId, campaign.inactiveDays);
+    const bookingUrl = liffUrl(this.config.get<string>('LIFF_ID'), LIFF_PATH.book);
     const result: WinbackRunResult = {
       campaignId: campaign.id,
       name: campaign.name,
@@ -93,7 +97,7 @@ export class WinbackService {
       // หน่วงก่อนฉบับที่สองเป็นต้นไป ฉบับแรกออกทันทีเพื่อให้เดโมเห็นผลเร็ว
       if (index > 0) await sleep(WINBACK_THROTTLE_MS);
 
-      const sent = await this.sendTo(campaign.id, campaign.message, target);
+      const sent = await this.sendTo(campaign.id, campaign.message, target, bookingUrl);
       if (sent) result.sent += 1;
       else result.failed += 1;
     }
@@ -138,7 +142,12 @@ export class WinbackService {
    * ลูกค้าจะได้ข้อความการตลาดสองฉบับ ซึ่งเป็นความผิดพลาดที่มองเห็นจากฝั่งลูกค้าทันที
    * และเมื่อส่งไม่สำเร็จจึงถอนสิทธิ์คืน เพื่อให้งานของวันพรุ่งนี้ลองใหม่ได้
    */
-  private async sendTo(campaignId: string, message: string, target: Target): Promise<boolean> {
+  private async sendTo(
+    campaignId: string,
+    message: string,
+    target: Target,
+    bookingUrl: string | undefined,
+  ): Promise<boolean> {
     let runId: string;
 
     try {
@@ -154,7 +163,7 @@ export class WinbackService {
     }
 
     const sent = target.lineUserId
-      ? await this.line.pushText(target.lineUserId, personalize(message, target.name))
+      ? await this.line.pushText(target.lineUserId, winbackText(message, target.name, bookingUrl))
       : false;
 
     if (!sent) {
@@ -179,4 +188,16 @@ export class WinbackService {
 /** แทน {name} ด้วยชื่อลูกค้า — ข้อความที่ไม่มีตัวแทนก็ส่งได้ตามเดิม */
 export function personalize(message: string, customerName: string): string {
   return message.split(NAME_PLACEHOLDER).join(customerName);
+}
+
+/**
+ * ข้อความแคมเปญที่ส่งจริง — ต่อลิงก์จองคิวท้ายข้อความตอนส่ง ไม่เก็บลงแม่แบบ
+ *
+ * แม่แบบเป็นของที่เจ้าของร้านแก้เองได้ ถ้าลิงก์อยู่ในนั้น วันที่เปลี่ยน LIFF app
+ * ลิงก์ในแคมเปญเก่าทุกอันจะเสียโดยไม่มีใครรู้
+ */
+export function winbackText(message: string, customerName: string, bookingUrl?: string): string {
+  const text = personalize(message, customerName);
+
+  return bookingUrl ? `${text}\n\n👉 จองคิวออนไลน์ได้เลยที่ ${bookingUrl}` : text;
 }

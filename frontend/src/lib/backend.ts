@@ -16,6 +16,14 @@ export function backendUrl(path: string, search = ''): string {
   return `${apiUrl()}/api/${path}${search}`;
 }
 
+/**
+ * header ที่แนบไปกับทุกคำขอหา backend
+ *
+ * ตอนเดโม backend อยู่บนเครื่องหลัง ngrok ฟรี ซึ่งตอบหน้าเตือนเป็น HTML แทน JSON
+ * ให้ทุกคำขอที่ไม่มี header นี้ ส่วนตอนรันบนเครื่องตัวเอง header นี้ไม่มีผลอะไร
+ */
+const BACKEND_HEADERS = { 'ngrok-skip-browser-warning': '1' } as const;
+
 export interface BackendCall {
   method: string;
   body?: string;
@@ -28,7 +36,7 @@ export async function callBackend(
   accessToken: string | undefined,
   call: BackendCall,
 ): Promise<Response> {
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { ...BACKEND_HEADERS };
 
   if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
   if (call.contentType) headers['Content-Type'] = call.contentType;
@@ -53,7 +61,7 @@ export async function refreshTokens(
 ): Promise<{ accessToken: string; refreshToken: string } | null> {
   const response = await fetch(backendUrl('auth/refresh'), {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...BACKEND_HEADERS, 'Content-Type': 'application/json' },
     body: JSON.stringify({ refreshToken }),
     cache: 'no-store',
   });

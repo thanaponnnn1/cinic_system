@@ -22,6 +22,8 @@ const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET ต้องยาวอย่างน้อย 32 ตัวอักษร'),
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('7d'),
+  // session ของลูกค้าที่เข้าผ่าน LIFF — แยก secret จากพนักงาน token ลูกค้าจึงเปิดหน้าจอร้านไม่ได้แน่นอน
+  JWT_CUSTOMER_SECRET: z.string().min(32, 'JWT_CUSTOMER_SECRET ต้องยาวอย่างน้อย 32 ตัวอักษร'),
 
   // บังคับตั้งแต่ Phase 3 — ขาดค่าใดค่าหนึ่งแปลว่าเตือนนัดส่งไม่ออกหรือ webhook รับ event ไม่ได้
   // ปล่อยว่างได้เฉพาะตอนรันเทสต์ ซึ่งไม่ได้ยิงหา LINE จริง (ดูเงื่อนไขท้ายไฟล์)
@@ -29,6 +31,17 @@ const envSchema = z.object({
   LINE_CHANNEL_SECRET: z.string().optional(),
   /// userId ของแอดมินร้าน — ไม่มีก็รันได้ แค่ไม่มีใครได้รับข้อความแจ้งเตือนฝั่งร้าน
   LINE_ADMIN_USER_ID: z.string().optional(),
+  /// Channel ID ของ LINE Login ที่ผูกกับ LIFF app — ไม่ตั้ง = หน้าลูกค้าเข้าผ่าน LINE ไม่ได้ (โหมดเดโมยังใช้ได้)
+  LINE_LIFF_CHANNEL_ID: z.string().optional(),
+  /// LIFF ID ของหน้าลูกค้า — ตั้งแล้วข้อความแคมเปญ เตือนคอร์ส และคำตอบอัตโนมัติจะมีลิงก์จองคิว
+  /// ค่าว่างใน .env ถือว่าไม่ได้ตั้ง · ตรวจรูปแบบไว้กันคนวาง URL เต็มมาแทน ID แล้วลิงก์เสียทุกข้อความ
+  LIFF_ID: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z
+      .string()
+      .regex(/^\d+-[A-Za-z0-9]+$/, 'LIFF_ID ต้องเป็นรูปแบบ 1234567890-AbCdEfGh (ไม่ใช่ URL เต็ม)')
+      .optional(),
+  ),
 
   // บัญชีเข้าหน้าจอคิวงาน /admin/queues — ไม่ตั้งค่า = ปิดหน้านั้นไปเลย
   BULL_BOARD_USER: z.string().optional(),
@@ -88,6 +101,25 @@ export function validateEnv(config: Record<string, unknown>): Env {
   if (env.JWT_ACCESS_SECRET === env.JWT_REFRESH_SECRET) {
     throw new Error(
       'JWT_ACCESS_SECRET กับ JWT_REFRESH_SECRET ต้องเป็นคนละค่ากัน ไม่งั้น refresh token จะถูกใช้แทน access token ได้',
+    );
+  }
+
+  // ถ้าซ้ำกับ secret ของพนักงาน token ที่ลูกค้าได้จากการสมัครเองจะผ่านลายเซ็นของหน้าจอร้าน
+  // เหลือแค่ฟิลด์ในตัว token เป็นด่านเดียวที่กั้นไว้ ซึ่งบางเกินไปสำหรับข้อมูลลูกค้าทั้งร้าน
+  if (
+    env.JWT_CUSTOMER_SECRET === env.JWT_ACCESS_SECRET ||
+    env.JWT_CUSTOMER_SECRET === env.JWT_REFRESH_SECRET
+  ) {
+    throw new Error(
+      'JWT_CUSTOMER_SECRET ต้องไม่ซ้ำกับ JWT_ACCESS_SECRET หรือ JWT_REFRESH_SECRET ไม่งั้น token ของลูกค้าจะผ่านลายเซ็นฝั่งพนักงานได้',
+    );
+  }
+
+  // โหมดเดโมเปิดปุ่มข้ามเวลาและทางเข้าในชื่อลูกค้าคนไหนก็ได้โดยไม่ต้องยืนยันตัวตน
+  // หลุดไปเปิดบน production ของร้านจริงเมื่อไหร่ ใครก็ดูและยกเลิกนัดของลูกค้าทุกคนได้
+  if (env.DEMO_MODE && env.NODE_ENV === 'production') {
+    throw new Error(
+      'ห้ามตั้ง DEMO_MODE=true คู่กับ NODE_ENV=production — โหมดเดโมเปิดทางเข้าแทนลูกค้าคนไหนก็ได้โดยไม่ต้องยืนยันตัวตน',
     );
   }
 

@@ -14,15 +14,19 @@ import { AppointmentActions } from './appointment-actions';
 export function AppointmentCard({
   appointment,
   showActions = true,
+  highlight = false,
 }: {
   appointment: Appointment;
   showActions?: boolean;
+  /** คิวที่เพิ่งเข้าบอร์ด — ขอบทองที่จางหายเอง (ดู .arrival-ring ใน globals.css) */
+  highlight?: boolean;
 }) {
   return (
     <article
-      className="rounded-lg border border-navy-600 bg-navy-900/70 p-3"
+      className="relative rounded-lg border border-navy-600 bg-navy-900/70 p-3"
       style={{ borderLeft: `3px solid ${appointment.statusColor}` }}
     >
+      {highlight && <span aria-hidden className="arrival-ring" />}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="font-display text-sm text-gold-100">

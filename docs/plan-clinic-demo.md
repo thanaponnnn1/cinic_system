@@ -350,7 +350,7 @@ GET    /docs-json                            OpenAPI spec (import Postman ได
 | งาน                          | ทำจริงเป็นอะไร                                                                                   |
 | ---------------------------- | ------------------------------------------------------------------------------------------------ |
 | สร้าง monorepo               | pnpm workspace: `backend/` (NestJS), `frontend/` (Next.js), `shared/` (enum + brand + API types) |
-| Docker Compose สำหรับ dev    | `postgres:17-alpine` พอร์ต **5433** · `redis:7-alpine` พอร์ต **6380** (เลี่ยงชนของเดิมในเครื่อง) |
+| Docker Compose สำหรับ dev    | `postgres:17-alpine` พอร์ต **5434** · `redis:7-alpine` พอร์ต **6380** (เลี่ยงชนของเดิมในเครื่อง) |
 | Prisma + migration แรก       | ตาราง `User` + enum `Role` · migration `init_user` ผ่านแล้ว                                      |
 | lint / format / commit hook  | ESLint 10 (flat config) + Prettier 3 + husky + lint-staged                                       |
 | `.env.example` ครบทุกตัว     | รวม `DEMO_MODE`, `TZ=Asia/Bangkok`, ช่อง LINE และ JWT ที่จะใช้ในเฟสถัดไป                         |

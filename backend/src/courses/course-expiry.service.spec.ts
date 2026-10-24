@@ -5,6 +5,7 @@ import { sleep } from '../common/sleep';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { LineMessagingService } from '../line/line-messaging.service';
 import type { ClockService } from '../clock/clock.service';
+import type { ConfigService } from '@nestjs/config';
 
 jest.mock('../common/sleep');
 
@@ -25,17 +26,22 @@ describe('CourseExpiryService', () => {
   const customerCourseDb = { findMany: jest.fn() };
   const messageLogDb = { findMany: jest.fn(), create: jest.fn() };
   const line = { pushText: jest.fn() };
+  let liffId: string | undefined;
 
   function build(): CourseExpiryService {
     return new CourseExpiryService(
       { customerCourse: customerCourseDb, messageLog: messageLogDb } as unknown as PrismaService,
       line as unknown as LineMessagingService,
       { now: () => NOW, refresh: jest.fn() } as unknown as ClockService,
+      {
+        get: (key: string) => (key === 'LIFF_ID' ? liffId : undefined),
+      } as unknown as ConfigService,
     );
   }
 
   beforeEach(() => {
     jest.clearAllMocks();
+    liffId = undefined;
     customerCourseDb.findMany.mockResolvedValue([course()]);
     messageLogDb.findMany.mockResolvedValue([]);
     messageLogDb.create.mockResolvedValue({});
@@ -128,6 +134,22 @@ describe('CourseExpiryService', () => {
 
     expect(sleep).toHaveBeenCalledTimes(1);
   });
+
+  it('ไม่ได้ตั้ง LIFF_ID ไม่มีลิงก์ในข้อความ', async () => {
+    await build().notifyExpiring();
+
+    expect(line.pushText.mock.calls[0][1]).not.toContain('liff.line.me');
+  });
+
+  it('ตั้ง LIFF_ID แล้ว ข้อความเตือนคอร์สลงท้ายด้วยลิงก์หน้าคอร์สของลูกค้า', async () => {
+    liffId = '2001234567-AbCdEfGh';
+
+    await build().notifyExpiring();
+
+    expect(line.pushText.mock.calls[0][1]).toMatch(
+      /👉 ดูคอร์สและจองคิวได้ที่ https:\/\/liff\.line\.me\/2001234567-AbCdEfGh\/c\/courses$/,
+    );
+  });
 });
 
 describe('formatCourseExpiry', () => {
@@ -144,5 +166,28 @@ describe('formatCourseExpiry', () => {
     expect(text).toContain('เหลือ 4 ครั้ง');
     expect(text).toContain('30 ก.ย. 2569');
     expect(text).toContain('อีก 29 วัน');
+  });
+
+  const COURSE = {
+    packageName: 'คอร์สทรีตเมนต์ 10 ครั้ง',
+    remainingSessions: 4,
+    expiresAt: new Date('2026-09-30T00:00:00.000Z'),
+    daysLeft: 29,
+  };
+  const WITHOUT_LINK =
+    '📋 คุณสมหญิง มีคอร์สที่ใกล้หมดอายุค่ะ\n\n' +
+    '• คอร์สทรีตเมนต์ 10 ครั้ง — เหลือ 4 ครั้ง หมดอายุ พุธ 30 ก.ย. 2569 (อีก 29 วัน)\n\n' +
+    'จองคิวมาใช้ให้ครบนะคะ ทักแชทนี้ได้เลยค่ะ';
+
+  it('ไม่มีลิงก์ LIFF ข้อความเหมือนก่อนมีหน้าลูกค้าทุกตัวอักษร', () => {
+    expect(formatCourseExpiry('สมหญิง', [COURSE])).toBe(WITHOUT_LINK);
+  });
+
+  it('มีลิงก์ LIFF ต่อบรรทัดลิงก์หน้าคอร์สไว้ท้ายสุด', () => {
+    expect(
+      formatCourseExpiry('สมหญิง', [COURSE], 'https://liff.line.me/2001234567-AbCdEfGh/c/courses'),
+    ).toBe(
+      `${WITHOUT_LINK}\n👉 ดูคอร์สและจองคิวได้ที่ https://liff.line.me/2001234567-AbCdEfGh/c/courses`,
+    );
   });
 });

@@ -1,7 +1,10 @@
+import { Role } from '@clinicq/shared';
+import { ROLES_KEY } from '../auth/decorators/roles.decorator';
 import { DemoController } from './demo.controller';
 import type { TimeMachineService } from './time-machine.service';
 import type { ClockService } from '../clock/clock.service';
 import type { DigestService } from '../digest/digest.service';
+import type { DemoDataService } from './demo-data.service';
 
 const NOW = new Date('2026-09-01T03:00:00.000Z');
 
@@ -9,12 +12,14 @@ describe('DemoController', () => {
   const timeMachine = { advance: jest.fn() };
   const clock = { now: () => NOW, offsetMs: 7_200_000, demoMode: true, reset: jest.fn() };
   const digest = { sendDailyDigest: jest.fn() };
+  const demoData = { reset: jest.fn() };
 
   function build(): DemoController {
     return new DemoController(
       timeMachine as unknown as TimeMachineService,
       clock as unknown as ClockService,
       digest as unknown as DigestService,
+      demoData as unknown as DemoDataService,
     );
   }
 
@@ -66,5 +71,24 @@ describe('DemoController', () => {
     digest.sendDailyDigest.mockResolvedValue(false);
 
     await expect(build().sendDigest()).resolves.toEqual({ sent: false });
+  });
+
+  it('ปุ่มรีเซ็ตข้อมูลเดโมคืนจำนวนที่ลบและสร้างใหม่จาก DemoDataService', async () => {
+    const result = {
+      now: NOW,
+      deleted: { appointments: 19, waitlistEntries: 1, messageLogs: 3 },
+      created: { total: 200, byStatus: { COMPLETED: 120 } },
+      remindersSynced: 30,
+      lastVisitsAdvanced: 9,
+    };
+    demoData.reset.mockResolvedValue(result);
+
+    await expect(build().reset()).resolves.toBe(result);
+  });
+
+  it('รีเซ็ตข้อมูลได้เฉพาะผู้ดูแลระบบ — พนักงานกดล้างนัดทั้งร้านไม่ได้', () => {
+    const roles = Reflect.getMetadata(ROLES_KEY, DemoController.prototype.reset) as Role[];
+
+    expect(roles).toEqual([Role.ADMIN]);
   });
 });

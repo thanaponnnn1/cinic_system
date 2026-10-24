@@ -29,7 +29,7 @@ function url(path: string, params?: Record<string, string | number | boolean | u
   return `/api/proxy/${path}${query ? `?${query}` : ''}`;
 }
 
-async function parse<T>(response: Response): Promise<T> {
+export async function parseApiResponse<T>(response: Response): Promise<T> {
   const text = await response.text();
   const payload = text ? (JSON.parse(text) as unknown) : null;
 
@@ -50,7 +50,7 @@ export async function apiGet<T>(
   path: string,
   params?: Record<string, string | number | boolean | undefined>,
 ): Promise<T> {
-  return parse<T>(await fetch(url(path, params), { cache: 'no-store' }));
+  return parseApiResponse<T>(await fetch(url(path, params), { cache: 'no-store' }));
 }
 
 async function send<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -60,7 +60,7 @@ async function send<T>(method: string, path: string, body?: unknown): Promise<T>
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 
-  return parse<T>(response);
+  return parseApiResponse<T>(response);
 }
 
 export const apiPost = <T>(path: string, body?: unknown): Promise<T> => send<T>('POST', path, body);

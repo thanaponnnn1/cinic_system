@@ -207,9 +207,14 @@ export class AppointmentsService {
 
   // ── สร้างและย้ายนัด ─────────────────────────────────────
 
+  /**
+   * สร้างนัด — ทางเดียวที่ทุกช่องทางจองต้องผ่าน (หน้าร้าน หน้าลูกค้า LIFF)
+   *
+   * createdById เป็น null เมื่อลูกค้าจองเอง เหมือนนัดที่ลูกค้ากดรับคิวว่างผ่าน LINE
+   */
   async create(
     dto: CreateAppointmentDto,
-    createdById: string,
+    createdById: string | null,
     viewerRole: Role,
   ): Promise<AppointmentResponseDto> {
     const startsAt = new Date(dto.startsAt);
@@ -408,7 +413,7 @@ export class AppointmentsService {
    * เพื่อให้การกดพร้อมกันสองครั้งไม่กลายเป็นการเขียนทับกันเอง
    */
   confirmFromLine(appointmentId: string, lineUserId: string): Promise<LineActionResult> {
-    return this.changeStatusFromLine(appointmentId, lineUserId, ApptStatus.CONFIRMED);
+    return this.changeStatusAsOwner(appointmentId, { lineUserId }, ApptStatus.CONFIRMED);
   }
 
   /**
@@ -418,12 +423,32 @@ export class AppointmentsService {
    * (เหตุผลอยู่ใน docs/plan-clinic-demo.md ข้อ 3.1)
    */
   requestRescheduleFromLine(appointmentId: string, lineUserId: string): Promise<LineActionResult> {
-    return this.changeStatusFromLine(appointmentId, lineUserId, ApptStatus.RESCHEDULE_REQUESTED);
+    return this.changeStatusAsOwner(appointmentId, { lineUserId }, ApptStatus.RESCHEDULE_REQUESTED);
   }
 
-  private async changeStatusFromLine(
+  // ── ปุ่มที่ลูกค้ากดเองในหน้าเว็บ LIFF (Phase 10) ─────────
+
+  /** กฎเดียวกับปุ่มในแชททุกอย่าง ต่างแค่รู้จักเจ้าของนัดจาก customerId ใน session */
+  confirmAsCustomer(appointmentId: string, customerId: string): Promise<LineActionResult> {
+    return this.changeStatusAsOwner(appointmentId, { customerId }, ApptStatus.CONFIRMED);
+  }
+
+  requestRescheduleAsCustomer(
     appointmentId: string,
-    lineUserId: string,
+    customerId: string,
+  ): Promise<LineActionResult> {
+    return this.changeStatusAsOwner(appointmentId, { customerId }, ApptStatus.RESCHEDULE_REQUESTED);
+  }
+
+  /**
+   * เปลี่ยนสถานะตามคำขอของลูกค้าเจ้าของนัด — ใช้ร่วมกันทั้งแชทและหน้าเว็บ
+   *
+   * วิธีพิสูจน์ว่าเป็นเจ้าของเป็นสิ่งเดียวที่ต่างกันระหว่างสองช่องทาง จึงรับเข้ามาเป็นข้อมูล
+   * ส่วนกฎการเปลี่ยนสถานะและการเขียนแบบกันกดซ้ำอยู่ที่นี่ที่เดียว
+   */
+  private async changeStatusAsOwner(
+    appointmentId: string,
+    owner: AppointmentOwner,
     to: ApptStatus,
   ): Promise<LineActionResult> {
     const appt = await this.prisma.appointment.findUnique({
@@ -436,7 +461,7 @@ export class AppointmentsService {
     });
 
     if (!appt) return { status: 'not_found' };
-    if (appt.customer.lineUserId !== lineUserId) return { status: 'forbidden' };
+    if (!isOwnedBy(appt.customer, owner)) return { status: 'forbidden' };
 
     const current = appt.status as ApptStatus;
 
@@ -612,6 +637,21 @@ export class AppointmentsService {
       data: { usedSessions: { increment: 1 } },
     });
   }
+}
+
+/**
+ * ลูกค้าที่อ้างว่าเป็นเจ้าของนัด — แชทรู้จักลูกค้าจากบัญชี LINE ที่กดปุ่ม
+ * ส่วนหน้าเว็บรู้จักจาก customerId ใน session ที่ยืนยันแล้ว
+ */
+export type AppointmentOwner = { lineUserId: string } | { customerId: string };
+
+function isOwnedBy(
+  customer: { id: string; lineUserId: string | null },
+  owner: AppointmentOwner,
+): boolean {
+  return 'lineUserId' in owner
+    ? customer.lineUserId === owner.lineUserId
+    : customer.id === owner.customerId;
 }
 
 /**

@@ -43,6 +43,10 @@ export const ApiErrorCode = {
   SLOT_TAKEN: 'SLOT_TAKEN',
   /** เปลี่ยนสถานะนัดข้ามขั้นที่ state machine ไม่อนุญาต */
   INVALID_TRANSITION: 'INVALID_TRANSITION',
+  /** ลูกค้าสมัครเองด้วยเบอร์ที่มีในร้านแล้ว — หน้าลูกค้าพาไปทางรหัสเชื่อมจากร้านแทน */
+  PHONE_ALREADY_REGISTERED: 'PHONE_ALREADY_REGISTERED',
+  /** ลูกค้าถือนัดที่ยังไม่ถึงเวลาครบจำนวนที่จองเองได้แล้ว */
+  BOOKING_LIMIT_REACHED: 'BOOKING_LIMIT_REACHED',
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;
 export type ApiErrorCode = (typeof ApiErrorCode)[keyof typeof ApiErrorCode];

@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { ApptStatus } from '@clinicq/shared';
 import { LineWebhookService } from './line-webhook.service';
 import { LineMessagingService } from './line-messaging.service';
+import { LineAccountLinkService } from './line-account-link.service';
 import { AppointmentsService } from '../appointments/appointments.service';
 import { WaitlistEngineService } from '../waitlist/waitlist-engine.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -55,6 +56,7 @@ describe('LineWebhookService — ปุ่มยืนยัน/ขอเลื�
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LineWebhookService,
+        LineAccountLinkService,
         {
           provide: PrismaService,
           useValue: {
@@ -65,7 +67,12 @@ describe('LineWebhookService — ปุ่มยืนยัน/ขอเลื�
         { provide: LineMessagingService, useValue: line },
         { provide: AppointmentsService, useValue: appointments },
         { provide: WaitlistEngineService, useValue: waitlist },
-        { provide: ConfigService, useValue: { get: () => adminUserId } },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: (key: string) => (key === 'LINE_ADMIN_USER_ID' ? adminUserId : undefined),
+          },
+        },
       ],
     }).compile();
 
@@ -124,6 +131,7 @@ describe('LineWebhookService — ปุ่มยืนยัน/ขอเลื�
     const module = await Test.createTestingModule({
       providers: [
         LineWebhookService,
+        LineAccountLinkService,
         {
           provide: PrismaService,
           useValue: { customer: {}, messageLog: {} },
@@ -218,11 +226,15 @@ describe('LineWebhookService — ปุ่มจองคิวว่าง', ()
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LineWebhookService,
+        LineAccountLinkService,
         { provide: PrismaService, useValue: { customer: {}, messageLog: {} } },
         { provide: LineMessagingService, useValue: line },
         { provide: AppointmentsService, useValue: appointments },
         { provide: WaitlistEngineService, useValue: waitlist },
-        { provide: ConfigService, useValue: { get: () => 'Uadmin' } },
+        {
+          provide: ConfigService,
+          useValue: { get: (key: string) => (key === 'LINE_ADMIN_USER_ID' ? 'Uadmin' : undefined) },
+        },
       ],
     }).compile();
 

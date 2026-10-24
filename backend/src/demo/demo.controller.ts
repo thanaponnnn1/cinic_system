@@ -6,6 +6,7 @@ import { ClockService } from '../clock/clock.service';
 import { DigestService } from '../digest/digest.service';
 import { TimeMachineService, type AdvanceResult } from './time-machine.service';
 import { AdvanceTimeDto } from './dto/advance-time.dto';
+import { DemoDataService, type DemoResetResult } from './demo-data.service';
 
 /** ค่าตั้งต้นของปุ่มข้ามเวลา = 1 วัน ซึ่งพอดีกับจังหวะเตือนล่วงหน้า 1 วัน */
 const DEFAULT_MINUTES = 24 * 60;
@@ -24,6 +25,7 @@ export class DemoController {
     private readonly timeMachine: TimeMachineService,
     private readonly clock: ClockService,
     private readonly digest: DigestService,
+    private readonly demoData: DemoDataService,
   ) {}
 
   @Post('advance-time')
@@ -67,5 +69,19 @@ export class DemoController {
     await this.clock.reset();
 
     return { now: this.clock.now(), offsetMs: this.clock.offsetMs };
+  }
+
+  @Post('reset')
+  @Roles(Role.ADMIN)
+  @ApiOperation({
+    summary: 'รีเซ็ตนัดทั้งหมดเป็นชุดเดโม',
+    description:
+      'ลบนัด คิวรอ และบันทึกข้อความที่ผูกกับนัด แล้วสร้างตารางเดโมใหม่ (ย้อนหลัง 14 วัน วันนี้ ' +
+      'พรุ่งนี้ และสัปดาห์หน้า) พร้อมคืนนาฬิกาเป็นเวลาจริง — ไม่แตะคอร์สหรือแคมเปญ ' +
+      'ในตัวลูกค้าแก้แค่วันที่มาล่าสุดให้ตรงกับนัดที่เสร็จแล้ว',
+  })
+  @ApiResponse({ status: 403, description: 'ไม่ได้เปิดโหมดเดโม หรือไม่ใช่ผู้ดูแลระบบ' })
+  reset(): Promise<DemoResetResult> {
+    return this.demoData.reset();
   }
 }

@@ -18,18 +18,22 @@ describe('CampaignsService', () => {
   const campaignRunDb = { count: jest.fn(), aggregate: jest.fn() };
   const line = { pushText: jest.fn() };
   let adminUserId: string | undefined;
+  let liffId: string | undefined;
 
   function build(): CampaignsService {
     return new CampaignsService(
       { campaign: campaignDb, campaignRun: campaignRunDb } as unknown as PrismaService,
       line as unknown as LineMessagingService,
-      { get: () => adminUserId } as unknown as ConfigService,
+      {
+        get: (key: string) => (key === 'LIFF_ID' ? liffId : adminUserId),
+      } as unknown as ConfigService,
     );
   }
 
   beforeEach(() => {
     jest.clearAllMocks();
     adminUserId = 'Uadmin';
+    liffId = undefined;
     campaignDb.findUnique.mockResolvedValue(CAMPAIGN);
     campaignRunDb.count.mockResolvedValue(0);
     campaignRunDb.aggregate.mockResolvedValue({ _sum: { revenue: null } });
@@ -74,6 +78,27 @@ describe('CampaignsService', () => {
       expect(line.pushText).toHaveBeenCalledWith(
         'Uadmin',
         expect.stringContaining('คิดถึงคุณ คุณลูกค้า จังเลยค่ะ'),
+      );
+    });
+
+    it('ไม่ได้ตั้ง LIFF_ID ข้อความทดสอบเหมือนเดิมทุกตัวอักษร', async () => {
+      await build().sendTest('camp_1');
+
+      expect(line.pushText).toHaveBeenCalledWith(
+        'Uadmin',
+        '🧪 ทดสอบแคมเปญ "ดึงลูกค้ากลับ 15%"\n\nคิดถึงคุณ คุณลูกค้า จังเลยค่ะ',
+      );
+    });
+
+    it('ตั้ง LIFF_ID แล้ว ข้อความทดสอบมีลิงก์จองคิวเหมือนที่ลูกค้าจะได้รับจริง', async () => {
+      liffId = '2001234567-AbCdEfGh';
+
+      await build().sendTest('camp_1');
+
+      expect(line.pushText).toHaveBeenCalledWith(
+        'Uadmin',
+        '🧪 ทดสอบแคมเปญ "ดึงลูกค้ากลับ 15%"\n\nคิดถึงคุณ คุณลูกค้า จังเลยค่ะ\n\n' +
+          '👉 จองคิวออนไลน์ได้เลยที่ https://liff.line.me/2001234567-AbCdEfGh/c/book',
       );
     });
 
