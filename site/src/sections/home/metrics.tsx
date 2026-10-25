@@ -41,7 +41,7 @@ export function Metrics() {
           ))}
         </dl>
         {sample && (
-          <p className="mt-12 text-sm text-gold-100/50">
+          <p className="mt-12 text-sm text-gold-100/70">
             จำนวนรีวิวและคะแนนเฉลี่ยคำนวณจากรีวิวตัวอย่างของเว็บเดโม ไม่ใช่รีวิวจริง
           </p>
         )}

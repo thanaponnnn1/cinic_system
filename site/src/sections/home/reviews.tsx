@@ -49,7 +49,12 @@ export function ReviewsSection() {
             <Arrow />
           </Link>
         </div>
-        <div className="mx-auto w-full max-w-[540px]">
+        <div className="relative mx-auto w-full max-w-[540px]">
+          {/* ก้อนแสงแชมเปญอยู่หลังกองการ์ด เงาเข้มเฉพาะแถวปุ่มใต้การ์ดให้ตัวหนังสือได้ contrast 4.5:1 */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -inset-x-20 top-[55%] -bottom-16 -z-10 bg-[radial-gradient(closest-side,rgb(6_13_21/0.8)_35%,transparent)]"
+          />
           <ReviewDeck reviews={featured.map(toCardReview)} />
         </div>
       </Container>

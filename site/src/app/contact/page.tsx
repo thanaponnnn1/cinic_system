@@ -52,7 +52,7 @@ export default function ContactPage() {
                 sizes="(min-width: 1024px) 480px, 92vw"
                 className="scale-[1.02]"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-navy-950/85 via-navy-950/10 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-navy-950/95 via-navy-950/30 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 z-[3] p-7">
                 <p className="font-display text-sm tracking-[0.3em] text-gold-300">THNP CLINIC</p>
                 <p className="mt-2 text-2xl font-light">เคาน์เตอร์ต้อนรับและมุมพักรอ</p>

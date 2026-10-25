@@ -20,6 +20,11 @@ export function ClosingCta() {
         <div className="absolute inset-0 bg-gradient-to-t from-navy-950/80 via-transparent to-navy-950/40" />
       </div>
       <GlBackdrop preset="aurora-gold" className="-z-10" />
+      {/* เงาเข้มเฉพาะหลังข้อความ ให้ตัวหนังสือได้ contrast 4.5:1 แม้ม่านแสงพาดผ่าน */}
+      <div
+        aria-hidden
+        className="absolute inset-y-0 left-0 -z-10 w-full bg-navy-950/60 lg:w-[62%] lg:bg-transparent lg:bg-gradient-to-r lg:from-navy-950/80 lg:via-navy-950/55 lg:to-transparent"
+      />
       <FlutedGlass className="absolute inset-y-0 right-0 -z-[5] hidden w-[42%] lg:block" />
 
       <Container className="relative z-10">

@@ -10,10 +10,10 @@ export function WordmarkBleed({ text }: { text: string }) {
   return (
     <div
       aria-hidden
-      className="pointer-events-none relative overflow-hidden opacity-60 select-none"
+      className="pointer-events-none relative overflow-hidden opacity-80 select-none"
     >
       <p className={`wordmark-metal ${TYPE}`}>{text}</p>
-      <div className="wordmark-sheen opacity-70">
+      <div className="wordmark-sheen opacity-60">
         <p className={TYPE}>{text}</p>
       </div>
     </div>

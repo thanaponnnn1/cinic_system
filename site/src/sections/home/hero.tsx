@@ -27,7 +27,7 @@ export function Hero() {
         <div className="absolute inset-0 bg-gradient-to-b from-navy-950/85 via-navy-950/70 to-navy-950" />
       </KenBurnsFrame>
       {/* แท็บเล็ตและเดสก์ท็อป: ม่านแสงทองเหนือพื้น มือถือใช้รูปเป็นพื้นตามเดิม (hidden ทำให้ไม่โหลดโค้ด GL) */}
-      <GlBackdrop preset="aurora-gold" className="-z-10 hidden md:block" />
+      <GlBackdrop preset="aurora-gold" intensity={1.5} className="-z-10 hidden md:block" />
       <Curtain />
 
       <Container className="relative z-10 grid min-h-[100svh] items-center gap-12 pt-28 pb-16 lg:grid-cols-[1.08fr_0.92fr] lg:gap-16 lg:pt-24 lg:pb-12">

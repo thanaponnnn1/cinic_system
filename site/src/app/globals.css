@@ -532,15 +532,15 @@ blockquote {
   .wordmark-metal {
     background: linear-gradient(
       180deg,
-      #fff3d2 0%,
-      #ecd29a 14%,
-      #c9a362 34%,
-      #8d6935 47%,
-      #b88f52 55%,
-      #f0d9a4 70%,
-      #fbeac0 78%,
-      #c39d5f 92%,
-      #9a763f 100%
+      #f4dca6 0%,
+      #d6b06a 15%,
+      #a07636 35%,
+      #5a3f1c 48%,
+      #9c7438 56%,
+      #e5c483 70%,
+      #f7e2ad 78%,
+      #b98d4c 92%,
+      #7d5a2b 100%
     );
     -webkit-background-clip: text;
     background-clip: text;

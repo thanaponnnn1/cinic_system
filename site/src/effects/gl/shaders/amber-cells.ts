@@ -7,8 +7,8 @@ import { COMMON } from './common';
 export const AMBER_CELLS = /* glsl */ `${COMMON}
 const vec3 INK = vec3(0.016, 0.030, 0.052);
 const vec3 NAVY = vec3(0.043, 0.082, 0.137);
-const vec3 AMBER = vec3(0.780, 0.470, 0.210);
-const vec3 GOLD = vec3(0.830, 0.730, 0.520);
+const vec3 AMBER = vec3(0.820, 0.430, 0.130);
+const vec3 GOLD = vec3(0.900, 0.700, 0.360);
 
 void main() {
   vec2 uv = gl_FragCoord.xy / uRes;
@@ -40,12 +40,12 @@ void main() {
 
   float h = hash12(id);
   float breathe = 0.6 + 0.4 * sin(uTime * 0.22 + h * 6.2831);
-  float glow = exp(-f1 * 2.1) * (0.3 + 0.7 * h * h) * breathe;
+  float glow = exp(-f1 * 2.3) * (0.15 + 0.85 * h * h) * breathe;
   float edge = 1.0 - smoothstep(0.0, 0.022, f2 - f1);
 
   vec3 col = mix(INK, NAVY, smoothstep(-0.2, 1.1, uv.y));
-  col += mix(AMBER, GOLD, h) * glow * 0.2;
-  col += mix(AMBER, GOLD, 0.6) * edge * (0.03 + 0.03 * breathe);
+  col = mix(col, mix(AMBER, GOLD, h) * 0.5, clamp(glow * 0.95, 0.0, 1.0));
+  col = mix(col, GOLD * 0.42, edge * 0.3);
   col *= 0.72 + 0.28 * smoothstep(1.25, 0.2, length((uv - 0.5) * vec2(1.0, 1.6)));
 
   col = mix(NAVY * 0.6, col, uIntensity);
